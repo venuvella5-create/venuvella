@@ -1,8 +1,9 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { prisma } from "@/lib/db/prisma";
 import { AffiliateProviderForm } from "@/components/admin/AffiliateProviderForm";
+import { requirePageRole } from "@/lib/auth/require-admin";
+import { prisma } from "@/lib/db/prisma";
 
 
 export const dynamic =
@@ -16,7 +17,13 @@ export default async function EditProviderPage({
     id: string;
   }>;
 }) {
-  const { id } = await params;
+  await requirePageRole([
+    "ADMIN",
+  ]);
+
+
+  const { id } =
+    await params;
 
 
   const provider =
@@ -51,7 +58,7 @@ export default async function EditProviderPage({
           href="/admin/providers"
           className="admin-link"
         >
-          ← Providers
+          â† Providers
         </Link>
 
 
@@ -62,6 +69,7 @@ export default async function EditProviderPage({
             <p className="admin-eyebrow">
               Commerce / Provider
             </p>
+
 
             <h1 className="display-serif mt-2 text-5xl">
               {provider.name}
@@ -78,6 +86,7 @@ export default async function EditProviderPage({
                 }
               </span>
 
+
               <span>
                 Clicks:{" "}
                 {
@@ -85,6 +94,7 @@ export default async function EditProviderPage({
                     .clicks
                 }
               </span>
+
 
               <span>
                 Redirects:{" "}
@@ -115,6 +125,7 @@ export default async function EditProviderPage({
             Provider settings
           </p>
 
+
           <h2 className="display-serif mt-2 text-3xl">
             Configuration
           </h2>
@@ -122,11 +133,18 @@ export default async function EditProviderPage({
 
           <AffiliateProviderForm
             provider={{
-              id: provider.id,
-              name: provider.name,
-              slug: provider.slug,
+              id:
+                provider.id,
+
+              name:
+                provider.name,
+
+              slug:
+                provider.slug,
+
               websiteUrl:
                 provider.websiteUrl,
+
               status:
                 provider.status,
             }}

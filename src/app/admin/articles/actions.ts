@@ -8,7 +8,7 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
-import { requireAdminSession } from "@/lib/auth/require-admin";
+import { requireRole } from "@/lib/auth/require-admin";
 import { articleInputSchema } from "@/lib/validation/content";
 
 
@@ -67,14 +67,17 @@ function getProductRelations(
         productId?: unknown;
       };
 
+
       if (
-        typeof data.productId === "string"
+        typeof data.productId ===
+        "string"
       ) {
         addProduct(
           data.productId,
           position
         );
       }
+
 
       return;
     }
@@ -84,16 +87,23 @@ function getProductRelations(
      * PRODUCT GRID
      */
 
-    if (block.type === "PRODUCT_GRID") {
+    if (
+      block.type ===
+      "PRODUCT_GRID"
+    ) {
       const data = block.data as {
         productIds?: unknown;
       };
 
+
       if (
-        Array.isArray(data.productIds)
+        Array.isArray(
+          data.productIds
+        )
       ) {
         data.productIds.forEach(
           (productId) => {
+
             if (
               typeof productId ===
               "string"
@@ -103,6 +113,7 @@ function getProductRelations(
                 position
               );
             }
+
           }
         );
       }
@@ -119,7 +130,14 @@ export async function createArticle(
   _previous: ArticleActionState,
   formData: FormData
 ): Promise<ArticleActionState> {
-  await requireAdminSession();
+
+  const session =
+    await requireRole([
+      "ADMIN",
+      "EDITOR",
+      "AUTHOR",
+    ]);
+
 
   const raw =
     Object.fromEntries(
@@ -144,6 +162,56 @@ export async function createArticle(
   }
 
 
+  /*
+   * AUTHOR OWNERSHIP
+   *
+   * ADMIN and EDITOR may choose any author.
+   *
+   * AUTHOR may only create content under the
+   * Author record linked to their own User.
+   */
+
+  if (
+    session.role ===
+    "AUTHOR"
+  ) {
+    const ownAuthor =
+      await prisma.author.findUnique({
+        where: {
+          userId:
+            session.userId,
+        },
+
+        select: {
+          id: true,
+        },
+      });
+
+
+    if (!ownAuthor) {
+      return {
+        ok: false,
+
+        message:
+          "Your account is not linked to an author profile.",
+      };
+    }
+
+
+    if (
+      parsed.data.authorId !==
+      ownAuthor.id
+    ) {
+      return {
+        ok: false,
+
+        message:
+          "You can only create articles under your own author profile.",
+      };
+    }
+  }
+
+
   let blocks: ParsedBlock[];
 
 
@@ -154,14 +222,20 @@ export async function createArticle(
       );
 
 
-    if (!Array.isArray(value)) {
+    if (
+      !Array.isArray(
+        value
+      )
+    ) {
       throw new Error(
         "Blocks must be an array."
       );
     }
 
 
-    blocks = value;
+    blocks =
+      value;
+
   } catch {
     return {
       ok: false,
@@ -177,13 +251,17 @@ export async function createArticle(
    */
 
   const invalidBlock =
-    blocks.find((block) => {
-      return !Object.values(
-        ArticleBlockType
-      ).includes(
-        block.type as ArticleBlockType
-      );
-    });
+    blocks.find(
+      (block) => {
+
+        return !Object.values(
+          ArticleBlockType
+        ).includes(
+          block.type as ArticleBlockType
+        );
+
+      }
+    );
 
 
   if (invalidBlock) {
@@ -200,20 +278,28 @@ export async function createArticle(
    * Validate PRODUCT and PRODUCT_GRID blocks
    */
 
-  for (const block of blocks) {
+  for (
+    const block
+    of blocks
+  ) {
 
     /*
      * PRODUCT
      */
 
-    if (block.type === "PRODUCT") {
-      const data = block.data as {
-        productId?: unknown;
-      };
+    if (
+      block.type ===
+      "PRODUCT"
+    ) {
+      const data =
+        block.data as {
+          productId?: unknown;
+        };
 
 
       if (
-        typeof data.productId !== "string" ||
+        typeof data.productId !==
+          "string" ||
         !data.productId
       ) {
         return {
@@ -227,16 +313,17 @@ export async function createArticle(
 
 
     /*
-     * PRODUCT_GRID
+     * PRODUCT GRID
      */
 
     if (
       block.type ===
       "PRODUCT_GRID"
     ) {
-      const data = block.data as {
-        productIds?: unknown;
-      };
+      const data =
+        block.data as {
+          productIds?: unknown;
+        };
 
 
       if (
@@ -249,7 +336,8 @@ export async function createArticle(
           (productId) =>
             typeof productId ===
               "string" &&
-            productId.length > 0
+            productId.length >
+              0
         )
       ) {
         return {
@@ -269,15 +357,19 @@ export async function createArticle(
    */
 
   const productRelations =
-    getProductRelations(blocks);
+    getProductRelations(
+      blocks
+    );
 
 
   /*
-   * Validate products still exist and are published
+   * Validate products still exist
+   * and are published
    */
 
   if (
-    productRelations.length > 0
+    productRelations.length >
+    0
   ) {
     const productIds =
       productRelations.map(
@@ -290,10 +382,12 @@ export async function createArticle(
       await prisma.product.findMany({
         where: {
           id: {
-            in: productIds,
+            in:
+              productIds,
           },
 
-          status: "PUBLISHED",
+          status:
+            "PUBLISHED",
         },
 
         select: {
@@ -470,7 +564,9 @@ export async function createArticle(
    * Revalidate public pages
    */
 
-  revalidatePath("/");
+  revalidatePath(
+    "/"
+  );
 
   revalidatePath(
     "/articles"

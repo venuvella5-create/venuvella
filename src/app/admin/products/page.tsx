@@ -1,12 +1,25 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
-import { prisma } from "@/lib/db/prisma";
+import {
+  requirePageRole,
+} from "@/lib/auth/require-admin";
+
+import {
+  prisma,
+} from "@/lib/db/prisma";
 
 
-export const dynamic = "force-dynamic";
+export const dynamic =
+  "force-dynamic";
 
 
 export default async function AdminProductsPage() {
+  await requirePageRole([
+    "ADMIN",
+    "EDITOR",
+  ]);
+
+
   const products =
     await prisma.product.findMany({
       orderBy: {

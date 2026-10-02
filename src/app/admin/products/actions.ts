@@ -1,4 +1,8 @@
-﻿"use server";
+"use server";
+
+
+
+
 
 
 
@@ -6,18 +10,39 @@ import { revalidatePath } from "next/cache";
 
 
 
+
+
+
+
 import {
+
+
 
   Prisma,
 
+
+
   SyncStatus,
+
+
 
 } from "@prisma/client";
 
 
 
+
+
+
+
 import { prisma } from "@/lib/db/prisma";
-import { requireAdminSession } from "@/lib/auth/require-admin";
+
+import { requireRole } from "@/lib/auth/require-admin";
+
+
+
+
+
+
 
 
 
@@ -25,9 +50,15 @@ import { requireAdminSession } from "@/lib/auth/require-admin";
 
 export type ProviderMappingActionState = {
 
+
+
   ok: boolean;
 
+
+
   message: string;
+
+
 
 };
 
@@ -35,17 +66,37 @@ export type ProviderMappingActionState = {
 
 
 
+
+
+
+
+
+
 function emptyToNull(
+
+
 
   value: FormDataEntryValue | null
 
+
+
 ) {
+
+
 
   if (typeof value !== "string") {
 
+
+
     return null;
 
+
+
   }
+
+
+
+
 
 
 
@@ -53,13 +104,29 @@ function emptyToNull(
 
 
 
+
+
+
+
   return trimmed.length > 0
+
+
 
     ? trimmed
 
+
+
     : null;
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -67,39 +134,79 @@ function emptyToNull(
 
 function isValidOptionalUrl(
 
+
+
   value: string | null
+
+
 
 ) {
 
+
+
   if (!value) {
+
+
 
     return true;
 
+
+
   }
+
+
+
+
 
 
 
   try {
 
+
+
     const url = new URL(value);
+
+
+
+
 
 
 
     return (
 
+
+
       url.protocol === "https:" ||
+
+
 
       url.protocol === "http:"
 
+
+
     );
+
+
 
   } catch {
 
+
+
     return false;
+
+
 
   }
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -107,25 +214,51 @@ function isValidOptionalUrl(
 
 function isSecureUrl(
 
+
+
   value: string
+
+
 
 ) {
 
+
+
   try {
+
+
 
     const url = new URL(value);
 
 
 
+
+
+
+
     return url.protocol === "https:";
+
+
 
   } catch {
 
+
+
     return false;
+
+
 
   }
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -133,55 +266,111 @@ function isSecureUrl(
 
 function getProviderKind(
 
+
+
   providerName: string
+
+
 
 ) {
 
+
+
   const normalized =
+
+
 
     providerName
 
+
+
       .trim()
+
+
 
       .toLowerCase();
 
 
 
+
+
+
+
   if (
 
+
+
     normalized.includes(
+
+
 
       "amazon"
 
+
+
     )
+
+
 
   ) {
 
+
+
     return "amazon";
 
+
+
   }
+
+
+
+
 
 
 
   if (
 
+
+
     normalized.includes(
+
+
 
       "walmart"
 
+
+
     )
+
+
 
   ) {
 
+
+
     return "walmart";
 
+
+
   }
+
+
+
+
 
 
 
   return "generic";
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -189,41 +378,83 @@ function getProviderKind(
 
 function normalizeExternalProductId(
 
+
+
   providerKind:
+
+
 
     | "amazon"
 
+
+
     | "walmart"
+
+
 
     | "generic",
 
+
+
   value: string
+
+
 
 ) {
 
+
+
   const normalized =
+
+
 
     value.trim();
 
 
 
+
+
+
+
   if (
+
+
 
     providerKind ===
 
+
+
     "amazon"
+
+
 
   ) {
 
+
+
     return normalized.toUpperCase();
+
+
 
   }
 
 
 
+
+
+
+
   return normalized;
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -231,17 +462,35 @@ function normalizeExternalProductId(
 
 function isValidAmazonAsin(
 
+
+
   value: string
+
+
 
 ) {
 
+
+
   return /^[A-Z0-9]{10}$/.test(
+
+
 
     value
 
+
+
   );
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -249,29 +498,55 @@ function isValidAmazonAsin(
 
 async function revalidateProductPaths(
 
+
+
   productId: string
+
+
 
 ) {
 
+
+
   const product =
+
+
 
     await prisma.product.findUnique({
 
+
+
       where: {
+
+
 
         id: productId,
 
+
+
       },
+
+
+
+
 
 
 
       select: {
 
+
+
         id: true,
+
+
 
         slug: true,
 
+
+
       },
+
+
 
     });
 
@@ -279,9 +554,19 @@ async function revalidateProductPaths(
 
 
 
+
+
+
+
+
+
   if (!product) {
 
+
+
     return;
+
+
 
   }
 
@@ -289,53 +574,111 @@ async function revalidateProductPaths(
 
 
 
+
+
+
+
+
+
   revalidatePath(
+
+
 
     "/admin/products"
 
+
+
   );
 
 
 
+
+
+
+
   revalidatePath(
+
+
 
     `/admin/products/${product.id}`
 
+
+
   );
 
 
 
+
+
+
+
   revalidatePath(
+
+
 
     "/admin/provider-sync"
 
+
+
   );
 
 
 
+
+
+
+
   revalidatePath(
+
+
 
     "/admin/affiliate-ops"
 
+
+
   );
 
 
 
+
+
+
+
   revalidatePath(
+
+
 
     `/products/${product.slug}`
 
+
+
   );
+
+
+
+
 
 
 
   revalidatePath(
 
+
+
     `/go/${product.slug}`
+
+
 
   );
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -343,23 +686,50 @@ async function revalidateProductPaths(
 
 export async function saveProviderMapping(
 
+
+
   _previous: ProviderMappingActionState,
 
+
+
   formData: FormData
+
+
 
 ): Promise<ProviderMappingActionState> {
 
 
 
-    await requireAdminSession();
+
+
+
+
+    await requireRole([
+    "ADMIN",
+    "EDITOR",
+  ]);
+
+
 
 const mappingId =
 
+
+
     String(
+
+
 
       formData.get("mappingId") ?? ""
 
+
+
     ).trim();
+
+
+
+
+
+
 
 
 
@@ -367,11 +737,23 @@ const mappingId =
 
   const productId =
 
+
+
     String(
+
+
 
       formData.get("productId") ?? ""
 
+
+
     ).trim();
+
+
+
+
+
+
 
 
 
@@ -379,11 +761,23 @@ const mappingId =
 
   const providerId =
 
+
+
     String(
+
+
 
       formData.get("providerId") ?? ""
 
+
+
     ).trim();
+
+
+
+
+
+
 
 
 
@@ -391,15 +785,31 @@ const mappingId =
 
   const rawExternalProductId =
 
+
+
     String(
+
+
 
       formData.get(
 
+
+
         "externalProductId"
+
+
 
       ) ?? ""
 
+
+
     ).trim();
+
+
+
+
+
+
 
 
 
@@ -407,11 +817,23 @@ const mappingId =
 
   const productUrl =
 
+
+
     emptyToNull(
+
+
 
       formData.get("productUrl")
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -419,11 +841,23 @@ const mappingId =
 
   const affiliateUrl =
 
+
+
     emptyToNull(
+
+
 
       formData.get("affiliateUrl")
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -431,11 +865,23 @@ const mappingId =
 
   const availability =
 
+
+
     emptyToNull(
+
+
 
       formData.get("availability")
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -443,11 +889,23 @@ const mappingId =
 
   const rawPrice =
 
+
+
     emptyToNull(
+
+
 
       formData.get("price")
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -455,11 +913,23 @@ const mappingId =
 
   const rawCurrency =
 
+
+
     emptyToNull(
+
+
 
       formData.get("currency")
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -467,15 +937,31 @@ const mappingId =
 
   const rawSyncStatus =
 
+
+
     String(
+
+
 
       formData.get(
 
+
+
         "syncStatus"
+
+
 
       ) ?? "SUCCESS"
 
+
+
     ).trim();
+
+
+
+
+
+
 
 
 
@@ -483,13 +969,23 @@ const mappingId =
 
   const rawPriority =
 
+
+
     String(
+
+
 
       formData.get(
 
+
+
         "priority"
 
+
+
       ) ?? "100"
+
+
 
     ).trim();
 
@@ -497,35 +993,71 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   /*
+
+
 
    * BASIC REQUIRED FIELDS
 
+
+
    */
 
 
 
+
+
+
+
   if (
+
+
 
     !productId ||
 
+
+
     !providerId ||
+
+
 
     !rawExternalProductId
 
+
+
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "Product, provider and external product ID are required.",
 
+
+
     };
+
+
 
   }
 
@@ -533,37 +1065,79 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   /*
+
+
 
    * GENERAL URL VALIDATION
 
+
+
    */
 
 
 
+
+
+
+
   if (
 
+
+
     !isValidOptionalUrl(
+
+
 
       productUrl
 
+
+
     )
+
+
 
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "Product URL must be a valid http or https URL.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -571,27 +1145,55 @@ const mappingId =
 
   if (
 
+
+
     !isValidOptionalUrl(
+
+
 
       affiliateUrl
 
+
+
     )
+
+
 
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "Affiliate URL must be a valid http or https URL.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -599,17 +1201,35 @@ const mappingId =
 
   /*
 
+
+
    * PRICE
 
+
+
    */
+
+
+
+
 
 
 
   let price:
 
+
+
     | Prisma.Decimal
 
+
+
     | null = null;
+
+
+
+
+
+
 
 
 
@@ -617,7 +1237,11 @@ const mappingId =
 
   if (rawPrice) {
 
+
+
     const parsedPrice =
+
+
 
       Number(rawPrice);
 
@@ -625,31 +1249,67 @@ const mappingId =
 
 
 
+
+
+
+
+
+
     if (
+
+
 
       !Number.isFinite(
 
+
+
         parsedPrice
+
+
 
       ) ||
 
+
+
       parsedPrice < 0
+
+
 
     ) {
 
+
+
       return {
+
+
 
         ok: false,
 
 
 
+
+
+
+
         message:
+
+
 
           "Price must be a valid non-negative number.",
 
+
+
       };
 
+
+
     }
+
+
+
+
+
+
 
 
 
@@ -657,11 +1317,19 @@ const mappingId =
 
     price =
 
+
+
       new Prisma.Decimal(
+
+
 
         rawPrice
 
+
+
       );
+
+
 
   }
 
@@ -669,17 +1337,35 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   /*
 
+
+
    * CURRENCY
+
+
 
    */
 
 
 
+
+
+
+
   let currency:
 
+
+
     | string
+
+
 
     | null = null;
 
@@ -687,9 +1373,19 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   if (rawCurrency) {
 
+
+
     const normalized =
+
+
 
       rawCurrency.toUpperCase();
 
@@ -697,29 +1393,63 @@ const mappingId =
 
 
 
+
+
+
+
+
+
     if (
+
+
 
       !/^[A-Z]{3}$/.test(
 
+
+
         normalized
+
+
 
       )
 
+
+
     ) {
 
+
+
       return {
+
+
 
         ok: false,
 
 
 
+
+
+
+
         message:
+
+
 
           "Currency must use a 3-letter code such as USD.",
 
+
+
       };
 
+
+
     }
+
+
+
+
+
+
 
 
 
@@ -727,7 +1457,11 @@ const mappingId =
 
     currency =
 
+
+
       normalized;
+
+
 
   }
 
@@ -735,39 +1469,79 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   /*
+
+
 
    * SYNC STATUS
 
+
+
    */
+
+
+
+
 
 
 
   if (
 
+
+
     !Object.values(
+
+
 
       SyncStatus
 
+
+
     ).includes(
+
+
 
       rawSyncStatus as SyncStatus
 
+
+
     )
+
+
 
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "Invalid sync status.",
 
+
+
     };
+
+
 
   }
 
@@ -775,19 +1549,39 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   /*
 
+
+
    * PRIORITY
+
+
 
    */
 
 
 
+
+
+
+
   const priority =
+
+
 
     Number(
 
+
+
       rawPriority
+
+
 
     );
 
@@ -795,31 +1589,63 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   if (
+
+
 
     !Number.isInteger(
 
+
+
       priority
+
+
 
     ) ||
 
+
+
     priority < 0 ||
+
+
 
     priority > 9999
 
+
+
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "Priority must be a whole number between 0 and 9999.",
 
+
+
     };
+
+
 
   }
 
@@ -827,33 +1653,71 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   /*
 
+
+
    * PRODUCT
+
+
 
    */
 
 
 
+
+
+
+
   const product =
+
+
 
     await prisma.product.findUnique({
 
+
+
       where: {
+
+
 
         id: productId,
 
+
+
       },
+
+
+
+
 
 
 
       select: {
 
+
+
         id: true,
+
+
 
       },
 
+
+
     });
+
+
+
+
+
+
 
 
 
@@ -861,17 +1725,31 @@ const mappingId =
 
   if (!product) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "Product not found.",
 
+
+
     };
+
+
 
   }
 
@@ -879,37 +1757,79 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   /*
 
+
+
    * PROVIDER
+
+
 
    */
 
 
 
+
+
+
+
   const provider =
+
+
 
     await prisma.affiliateProvider.findUnique({
 
+
+
       where: {
+
+
 
         id: providerId,
 
+
+
       },
+
+
+
+
 
 
 
       select: {
 
+
+
         id: true,
+
+
 
         name: true,
 
+
+
         active: true,
+
+
 
       },
 
+
+
     });
+
+
+
+
+
+
 
 
 
@@ -917,19 +1837,39 @@ const mappingId =
 
   if (!provider) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "Affiliate provider not found.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -937,11 +1877,23 @@ const mappingId =
 
   const providerKind =
 
+
+
     getProviderKind(
+
+
 
       provider.name
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -949,11 +1901,19 @@ const mappingId =
 
   const externalProductId =
 
+
+
     normalizeExternalProductId(
+
+
 
       providerKind,
 
+
+
       rawExternalProductId
+
+
 
     );
 
@@ -961,47 +1921,99 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   /*
+
+
 
    * AMAZON MANUAL VALIDATION
 
+
+
    */
+
+
+
+
 
 
 
   if (
 
+
+
     providerKind ===
+
+
 
     "amazon"
 
+
+
   ) {
+
+
+
+
 
 
 
     if (
 
+
+
       !isValidAmazonAsin(
+
+
 
         externalProductId
 
+
+
       )
+
+
 
     ) {
 
+
+
       return {
+
+
 
         ok: false,
 
 
 
+
+
+
+
         message:
+
+
 
           "Amazon mappings require a valid 10-character ASIN.",
 
+
+
       };
 
+
+
     }
+
+
+
+
+
+
 
 
 
@@ -1009,17 +2021,31 @@ const mappingId =
 
     if (!affiliateUrl) {
 
+
+
       return {
+
+
 
         ok: false,
 
 
 
+
+
+
+
         message:
+
+
 
           "Amazon requires an affiliate URL before the mapping can be saved.",
 
+
+
       };
+
+
 
     }
 
@@ -1027,27 +2053,55 @@ const mappingId =
 
 
 
+
+
+
+
+
+
     if (
 
+
+
       !isSecureUrl(
+
+
 
         affiliateUrl
 
+
+
       )
+
+
 
     ) {
 
+
+
       return {
+
+
 
         ok: false,
 
 
 
+
+
+
+
         message:
+
+
 
           "Amazon affiliate URLs must use HTTPS.",
 
+
+
       };
+
+
 
     }
 
@@ -1055,31 +2109,67 @@ const mappingId =
 
 
 
+
+
+
+
+
+
     if (
+
+
 
       productUrl &&
 
+
+
       !isSecureUrl(
+
+
 
         productUrl
 
+
+
       )
+
+
 
     ) {
 
+
+
       return {
+
+
 
         ok: false,
 
 
 
+
+
+
+
         message:
+
+
 
           "Amazon product URLs must use HTTPS.",
 
+
+
       };
 
+
+
     }
+
+
+
+
+
+
 
 
 
@@ -1087,17 +2177,31 @@ const mappingId =
 
     if (
 
+
+
       price &&
+
+
 
       !currency
 
+
+
     ) {
+
+
 
       currency =
 
+
+
         "USD";
 
+
+
     }
+
+
 
   }
 
@@ -1105,45 +2209,95 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   /*
+
+
 
    * WALMART MANUAL VALIDATION
 
+
+
    */
+
+
+
+
 
 
 
   if (
 
+
+
     providerKind ===
 
+
+
     "walmart"
+
+
 
   ) {
 
 
 
+
+
+
+
     if (
+
+
 
       externalProductId.length <
 
+
+
       2
+
+
 
     ) {
 
+
+
       return {
+
+
 
         ok: false,
 
 
 
+
+
+
+
         message:
+
+
 
           "Enter a valid Walmart item or product ID.",
 
+
+
       };
 
+
+
     }
+
+
+
+
+
+
 
 
 
@@ -1151,17 +2305,31 @@ const mappingId =
 
     if (!affiliateUrl) {
 
+
+
       return {
+
+
 
         ok: false,
 
 
 
+
+
+
+
         message:
+
+
 
           "Walmart requires an affiliate URL before the mapping can be saved.",
 
+
+
       };
+
+
 
     }
 
@@ -1169,27 +2337,55 @@ const mappingId =
 
 
 
+
+
+
+
+
+
     if (
 
+
+
       !isSecureUrl(
+
+
 
         affiliateUrl
 
+
+
       )
+
+
 
     ) {
 
+
+
       return {
+
+
 
         ok: false,
 
 
 
+
+
+
+
         message:
+
+
 
           "Walmart affiliate URLs must use HTTPS.",
 
+
+
       };
+
+
 
     }
 
@@ -1197,31 +2393,67 @@ const mappingId =
 
 
 
+
+
+
+
+
+
     if (
+
+
 
       productUrl &&
 
+
+
       !isSecureUrl(
+
+
 
         productUrl
 
+
+
       )
+
+
 
     ) {
 
+
+
       return {
+
+
 
         ok: false,
 
 
 
+
+
+
+
         message:
+
+
 
           "Walmart product URLs must use HTTPS.",
 
+
+
       };
 
+
+
     }
+
+
+
+
+
+
 
 
 
@@ -1229,17 +2461,31 @@ const mappingId =
 
     if (
 
+
+
       price &&
+
+
 
       !currency
 
+
+
     ) {
+
+
 
       currency =
 
+
+
         "USD";
 
+
+
     }
+
+
 
   }
 
@@ -1247,53 +2493,111 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   /*
+
+
 
    * DUPLICATE MAPPING
 
+
+
    */
+
+
+
+
 
 
 
   const duplicate =
 
+
+
     await prisma.providerProduct.findFirst({
+
+
 
       where: {
 
+
+
         providerId,
+
+
 
         externalProductId,
 
 
 
+
+
+
+
         ...(mappingId
+
+
 
           ? {
 
+
+
               NOT: {
+
+
 
                 id:
 
+
+
                   mappingId,
+
+
 
               },
 
+
+
             }
+
+
 
           : {}),
 
+
+
       },
+
+
+
+
 
 
 
       select: {
 
+
+
         id: true,
+
+
 
       },
 
+
+
     });
+
+
+
+
+
+
 
 
 
@@ -1301,19 +2605,39 @@ const mappingId =
 
   if (duplicate) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "This provider already has a mapping with that external product ID.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1323,11 +2647,23 @@ const mappingId =
 
 
 
+
+
+
+
     /*
+
+
 
      * UPDATE MAPPING
 
+
+
      */
+
+
+
+
 
 
 
@@ -1335,27 +2671,53 @@ const mappingId =
 
 
 
+
+
+
+
       const existing =
+
+
 
         await prisma.providerProduct.findUnique({
 
+
+
           where: {
+
+
 
             id:
 
+
+
               mappingId,
 
+
+
           },
+
+
+
+
 
 
 
           select: {
 
+
+
             id: true,
+
+
 
             productId: true,
 
+
+
           },
+
+
 
         });
 
@@ -1363,21 +2725,47 @@ const mappingId =
 
 
 
+
+
+
+
+
+
       if (!existing) {
 
+
+
         return {
+
+
 
           ok: false,
 
 
 
+
+
+
+
           message:
+
+
 
             "Provider mapping not found.",
 
+
+
         };
 
+
+
       }
+
+
+
+
+
+
 
 
 
@@ -1385,23 +2773,43 @@ const mappingId =
 
       if (
 
+
+
         existing.productId !==
+
+
 
         productId
 
+
+
       ) {
 
+
+
         return {
+
+
 
           ok: false,
 
 
 
+
+
+
+
           message:
+
+
 
             "This mapping does not belong to this product.",
 
+
+
         };
+
+
 
       }
 
@@ -1409,21 +2817,45 @@ const mappingId =
 
 
 
+
+
+
+
+
+
       await prisma.providerProduct.update({
+
+
 
         where: {
 
+
+
           id:
 
+
+
             mappingId,
+
+
 
         },
 
 
 
+
+
+
+
         data: {
 
+
+
           providerId,
+
+
+
+
 
 
 
@@ -1431,7 +2863,15 @@ const mappingId =
 
 
 
+
+
+
+
           productUrl,
+
+
+
+
 
 
 
@@ -1439,7 +2879,15 @@ const mappingId =
 
 
 
+
+
+
+
           price,
+
+
+
+
 
 
 
@@ -1447,7 +2895,15 @@ const mappingId =
 
 
 
+
+
+
+
           availability,
+
+
+
+
 
 
 
@@ -1455,25 +2911,51 @@ const mappingId =
 
 
 
+
+
+
+
           syncStatus:
+
+
 
             rawSyncStatus as SyncStatus,
 
 
 
+
+
+
+
           lastSyncedAt:
+
+
 
             rawSyncStatus ===
 
+
+
             "SUCCESS"
+
+
 
               ? new Date()
 
+
+
               : null,
+
+
 
         },
 
+
+
       });
+
+
+
+
 
 
 
@@ -1481,19 +2963,39 @@ const mappingId =
 
 
 
+
+
+
+
       /*
 
+
+
        * CREATE MAPPING
+
+
 
        */
 
 
 
+
+
+
+
       await prisma.providerProduct.create({
+
+
 
         data: {
 
+
+
           productId,
+
+
+
+
 
 
 
@@ -1501,7 +3003,15 @@ const mappingId =
 
 
 
+
+
+
+
           externalProductId,
+
+
+
+
 
 
 
@@ -1509,7 +3019,15 @@ const mappingId =
 
 
 
+
+
+
+
           affiliateUrl,
+
+
+
+
 
 
 
@@ -1517,7 +3035,15 @@ const mappingId =
 
 
 
+
+
+
+
           currency,
+
+
+
+
 
 
 
@@ -1525,31 +3051,63 @@ const mappingId =
 
 
 
+
+
+
+
           priority,
+
+
+
+
 
 
 
           syncStatus:
 
+
+
             rawSyncStatus as SyncStatus,
+
+
+
+
 
 
 
           lastSyncedAt:
 
+
+
             rawSyncStatus ===
+
+
 
             "SUCCESS"
 
+
+
               ? new Date()
+
+
 
               : null,
 
+
+
         },
+
+
 
       });
 
+
+
     }
+
+
+
+
 
 
 
@@ -1557,11 +3115,21 @@ const mappingId =
 
 
 
+
+
+
+
     console.error(
+
+
 
       "Failed to save provider mapping:",
 
+
+
       error
+
+
 
     );
 
@@ -1569,19 +3137,43 @@ const mappingId =
 
 
 
+
+
+
+
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "Could not save the provider mapping.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1589,7 +3181,11 @@ const mappingId =
 
   await revalidateProductPaths(
 
+
+
     productId
+
+
 
   );
 
@@ -1597,21 +3193,43 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   return {
+
+
 
     ok: true,
 
 
 
+
+
+
+
     message:
+
+
 
       mappingId
 
+
+
         ? `${provider.name} mapping updated successfully.`
+
+
 
         : `${provider.name} mapping created successfully.`,
 
+
+
   };
+
+
 
 }
 
@@ -1619,27 +3237,62 @@ const mappingId =
 
 
 
+
+
+
+
+
+
 export async function deleteProviderMapping(
 
+
+
   formData: FormData
+
+
 
 ) {
 
 
 
-    await requireAdminSession();
+
+
+
+
+    await requireRole([
+    "ADMIN",
+    "EDITOR",
+  ]);
+
+
 
 const mappingId =
 
+
+
     String(
+
+
 
       formData.get(
 
+
+
         "mappingId"
+
+
 
       ) ?? ""
 
+
+
     ).trim();
+
+
+
+
+
+
 
 
 
@@ -1647,13 +3300,23 @@ const mappingId =
 
   const productId =
 
+
+
     String(
+
+
 
       formData.get(
 
+
+
         "productId"
 
+
+
       ) ?? ""
+
+
 
     ).trim();
 
@@ -1661,17 +3324,39 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   if (
+
+
 
     !mappingId ||
 
+
+
     !productId
+
+
 
   ) {
 
+
+
     return;
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1679,25 +3364,47 @@ const mappingId =
 
   const mapping =
 
+
+
     await prisma.providerProduct.findUnique({
+
+
 
       where: {
 
+
+
         id:
+
+
 
           mappingId,
 
+
+
       },
+
+
+
+
 
 
 
       select: {
 
+
+
         id: true,
+
+
 
         productId: true,
 
+
+
       },
+
+
 
     });
 
@@ -1705,11 +3412,27 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   if (!mapping) {
+
+
 
     return;
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1717,15 +3440,31 @@ const mappingId =
 
   if (
 
+
+
     mapping.productId !==
+
+
 
     productId
 
+
+
   ) {
+
+
 
     return;
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1735,17 +3474,35 @@ const mappingId =
 
 
 
+
+
+
+
     await prisma.providerProduct.delete({
+
+
 
       where: {
 
+
+
         id:
+
+
 
           mappingId,
 
+
+
       },
 
+
+
     });
+
+
+
+
 
 
 
@@ -1753,17 +3510,33 @@ const mappingId =
 
 
 
+
+
+
+
     console.error(
+
+
 
       "Failed to delete provider mapping:",
 
+
+
       error
+
+
 
     );
 
 
 
+
+
+
+
     return;
+
+
 
   }
 
@@ -1771,10 +3544,22 @@ const mappingId =
 
 
 
+
+
+
+
+
+
   await revalidateProductPaths(
+
+
 
     productId
 
+
+
   );
+
+
 
 }

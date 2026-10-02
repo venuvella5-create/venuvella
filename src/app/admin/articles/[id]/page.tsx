@@ -1,8 +1,9 @@
-import { notFound } from "next/navigation";
+﻿import { notFound } from "next/navigation";
 import Link from "next/link";
 
-import { prisma } from "@/lib/db/prisma";
 import { EditArticleEditor } from "@/components/admin/EditArticleEditor";
+import { requirePageRole } from "@/lib/auth/require-admin";
+import { prisma } from "@/lib/db/prisma";
 
 
 const textBlockTypes = [
@@ -42,6 +43,10 @@ type EditorBlock =
   | EditorProductGridBlock;
 
 
+export const dynamic =
+  "force-dynamic";
+
+
 export default async function EditArticlePage({
   params,
 }: {
@@ -49,36 +54,88 @@ export default async function EditArticlePage({
     id: string;
   }>;
 }) {
-  const { id } = await params;
+  const session =
+    await requirePageRole([
+      "ADMIN",
+      "EDITOR",
+      "AUTHOR",
+    ]);
 
 
-  const [
-    article,
-    categories,
-    authors,
-    products,
-  ] = await Promise.all([
+  const { id } =
+    await params;
 
-    prisma.article.findUnique({
+
+  const isAuthor =
+    session.role ===
+    "AUTHOR";
+
+
+  const ownAuthor =
+    isAuthor
+      ? await prisma.author.findUnique({
+          where: {
+            userId:
+              session.userId,
+          },
+
+          select: {
+            id: true,
+            name: true,
+          },
+        })
+      : null;
+
+
+  if (
+    isAuthor &&
+    !ownAuthor
+  ) {
+    notFound();
+  }
+
+
+  const article =
+    await prisma.article.findFirst({
       where: {
         id,
+
+        ...(isAuthor && ownAuthor
+          ? {
+              authorId:
+                ownAuthor.id,
+            }
+          : {}),
       },
 
       include: {
         blocks: {
           orderBy: {
-            position: "asc",
+            position:
+              "asc",
           },
         },
 
         seo: true,
       },
-    }),
+    });
 
+
+  if (!article) {
+    notFound();
+  }
+
+
+  const [
+    categories,
+    authors,
+    products,
+  ] = await Promise.all([
 
     prisma.category.findMany({
       orderBy: {
-        sortOrder: "asc",
+        sortOrder:
+          "asc",
       },
 
       select: {
@@ -88,25 +145,42 @@ export default async function EditArticlePage({
     }),
 
 
-    prisma.author.findMany({
-      orderBy: {
-        name: "asc",
-      },
+    isAuthor
+      ? Promise.resolve(
+          ownAuthor
+            ? [
+                {
+                  id:
+                    ownAuthor.id,
 
-      select: {
-        id: true,
-        name: true,
-      },
-    }),
+                  name:
+                    ownAuthor.name,
+                },
+              ]
+            : []
+        )
+      : prisma.author.findMany({
+          orderBy: {
+            name:
+              "asc",
+          },
+
+          select: {
+            id: true,
+            name: true,
+          },
+        }),
 
 
     prisma.product.findMany({
       where: {
-        status: "PUBLISHED",
+        status:
+          "PUBLISHED",
       },
 
       orderBy: {
-        name: "asc",
+        name:
+          "asc",
       },
 
       select: {
@@ -132,14 +206,12 @@ export default async function EditArticlePage({
   ]);
 
 
-  if (!article) {
-    notFound();
-  }
-
-
   const blocks =
     article.blocks.reduce<EditorBlock[]>(
-      (result, block) => {
+      (
+        result,
+        block
+      ) => {
 
         const data =
           block.data as {
@@ -149,28 +221,24 @@ export default async function EditArticlePage({
           };
 
 
-        /*
-         * PRODUCT
-         */
-
         if (
-          block.type === "PRODUCT" &&
+          block.type ===
+            "PRODUCT" &&
           typeof data.productId ===
             "string"
         ) {
           result.push({
-            type: "PRODUCT",
+            type:
+              "PRODUCT",
+
             productId:
               data.productId,
           });
 
+
           return result;
         }
 
-
-        /*
-         * PRODUCT GRID
-         */
 
         if (
           block.type ===
@@ -192,7 +260,8 @@ export default async function EditArticlePage({
 
 
           if (
-            productIds.length > 0
+            productIds.length >
+            0
           ) {
             result.push({
               type:
@@ -206,10 +275,6 @@ export default async function EditArticlePage({
           return result;
         }
 
-
-        /*
-         * TEXT BLOCK
-         */
 
         const isTextBlock =
           (
@@ -249,7 +314,7 @@ export default async function EditArticlePage({
           href="/admin/articles"
           className="admin-link"
         >
-          ← Articles
+          â† Articles
         </Link>
 
 
@@ -259,9 +324,20 @@ export default async function EditArticlePage({
             Content / Edit article
           </p>
 
+
           <h1 className="display-serif text-5xl">
             Edit story
           </h1>
+
+
+          {isAuthor && ownAuthor && (
+            <p className="mt-4 text-sm text-[var(--muted)]">
+              Editing as{" "}
+              <span className="font-medium text-[var(--ink)]">
+                {ownAuthor.name}
+              </span>
+            </p>
+          )}
 
         </div>
 

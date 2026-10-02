@@ -2,30 +2,59 @@
 
 
 
+
+
+
+
 import { revalidatePath } from "next/cache";
+
+
+
+
 
 
 
 import {
 
+
+
   ArticleBlockType,
 
+
+
   Prisma,
+
+
 
 } from "@prisma/client";
 
 
 
+
+
+
+
 import { prisma } from "@/lib/db/prisma";
-import { requireAdminSession } from "@/lib/auth/require-admin";
+
+import { requireRole } from "@/lib/auth/require-admin";
+
+
 
 import { articleInputSchema } from "@/lib/validation/content";
 
 
 
+
+
+
+
 import type {
 
+
+
   ArticleActionState,
+
+
 
 } from "./actions";
 
@@ -33,11 +62,23 @@ import type {
 
 
 
+
+
+
+
+
+
 type ParsedBlock = {
+
+
 
   type: string;
 
+
+
   data: Prisma.InputJsonValue;
+
+
 
 };
 
@@ -45,21 +86,43 @@ type ParsedBlock = {
 
 
 
+
+
+
+
+
+
 function getProductRelations(
+
+
 
   blocks: ParsedBlock[]
 
+
+
 ) {
+
+
 
   const seen = new Set<string>();
 
 
 
+
+
+
+
   const products: {
+
+
 
     productId: string;
 
+
+
     position: number;
+
+
 
   }[] = [];
 
@@ -67,27 +130,57 @@ function getProductRelations(
 
 
 
+
+
+
+
+
+
   function addProduct(
+
+
 
     productId: string,
 
+
+
     position: number
+
+
 
   ) {
 
+
+
     if (!productId) {
+
+
 
       return;
 
+
+
     }
+
+
+
+
 
 
 
     if (seen.has(productId)) {
 
+
+
       return;
 
+
+
     }
+
+
+
+
 
 
 
@@ -95,15 +188,33 @@ function getProductRelations(
 
 
 
+
+
+
+
     products.push({
+
+
 
       productId,
 
+
+
       position,
+
+
 
     });
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -113,45 +224,93 @@ function getProductRelations(
 
 
 
+
+
+
+
     /*
+
+
 
      * SINGLE PRODUCT
 
+
+
      */
+
+
+
+
 
 
 
     if (block.type === "PRODUCT") {
 
+
+
       const data = block.data as {
 
+
+
         productId?: unknown;
+
+
 
       };
 
 
 
+
+
+
+
       if (
+
+
 
         typeof data.productId === "string"
 
+
+
       ) {
+
+
 
         addProduct(
 
+
+
           data.productId,
+
+
 
           position
 
+
+
         );
+
+
 
       }
 
 
 
+
+
+
+
       return;
 
+
+
     }
+
+
+
+
+
+
 
 
 
@@ -159,57 +318,113 @@ function getProductRelations(
 
     /*
 
+
+
      * PRODUCT GRID
+
+
 
      */
 
 
 
+
+
+
+
     if (block.type === "PRODUCT_GRID") {
+
+
 
       const data = block.data as {
 
+
+
         productIds?: unknown;
+
+
 
       };
 
 
 
+
+
+
+
       if (
+
+
 
         Array.isArray(data.productIds)
 
+
+
       ) {
+
+
 
         data.productIds.forEach(
 
+
+
           (productId) => {
+
+
 
             if (
 
+
+
               typeof productId ===
+
+
 
               "string"
 
+
+
             ) {
+
+
 
               addProduct(
 
+
+
                 productId,
+
+
 
                 position
 
+
+
               );
+
+
 
             }
 
+
+
           }
+
+
 
         );
 
+
+
       }
 
+
+
     }
+
+
+
+
 
 
 
@@ -219,7 +434,15 @@ function getProductRelations(
 
 
 
+
+
+
+
+
+
   return products;
+
+
 
 }
 
@@ -227,25 +450,60 @@ function getProductRelations(
 
 
 
+
+
+
+
+
+
 export async function updateArticle(
+
+
 
   _previous: ArticleActionState,
 
+
+
   formData: FormData
+
+
 
 ): Promise<ArticleActionState> {
 
 
 
-    await requireAdminSession();
+
+
+
+
+    const session =
+    await requireRole([
+      "ADMIN",
+      "EDITOR",
+      "AUTHOR",
+    ]);
+
+
 
 const raw =
 
+
+
     Object.fromEntries(
+
+
 
       formData.entries()
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -253,7 +511,15 @@ const raw =
 
   const id =
 
+
+
     String(raw.id ?? "");
+
+
+
+
+
+
 
 
 
@@ -261,9 +527,15 @@ const raw =
 
   const parsed =
 
+
+
     articleInputSchema.safeParse(
 
+
+
       raw
+
+
 
     );
 
@@ -271,29 +543,63 @@ const raw =
 
 
 
+
+
+
+
+
+
   if (!id || !parsed.success) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         !parsed.success
 
+
+
           ? parsed.error.issues[0]
+
+
 
               ?.message ??
 
+
+
             "Please check the form."
+
+
 
           : "Missing article ID.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -305,15 +611,35 @@ const raw =
 
 
 
+
+
+
+
+
+
   try {
+
+
 
     const value =
 
+
+
       JSON.parse(
+
+
 
         parsed.data.blocks
 
+
+
       );
+
+
+
+
+
+
 
 
 
@@ -321,13 +647,27 @@ const raw =
 
     if (!Array.isArray(value)) {
 
+
+
       throw new Error(
+
+
 
         "Blocks must be an array."
 
+
+
       );
 
+
+
     }
+
+
+
+
+
+
 
 
 
@@ -335,19 +675,35 @@ const raw =
 
     blocks = value;
 
+
+
   } catch {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "Article blocks contain invalid JSON.",
 
+
+
     };
+
+
 
   }
 
@@ -355,29 +711,63 @@ const raw =
 
 
 
+
+
+
+
+
+
   /*
 
+
+
    * Validate block types
+
+
 
    */
 
 
 
+
+
+
+
   const invalidBlock =
+
+
 
     blocks.find((block) => {
 
+
+
       return !Object.values(
+
+
 
         ArticleBlockType
 
+
+
       ).includes(
+
+
 
         block.type as ArticleBlockType
 
+
+
       );
 
+
+
     });
+
+
+
+
+
+
 
 
 
@@ -385,17 +775,31 @@ const raw =
 
   if (invalidBlock) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "Article contains an unsupported block type.",
 
+
+
     };
+
+
 
   }
 
@@ -403,11 +807,25 @@ const raw =
 
 
 
+
+
+
+
+
+
   /*
+
+
 
    * Validate PRODUCT and PRODUCT_GRID blocks
 
+
+
    */
+
+
+
+
 
 
 
@@ -415,19 +833,37 @@ const raw =
 
 
 
+
+
+
+
     /*
+
+
 
      * PRODUCT
 
+
+
      */
+
+
+
+
 
 
 
     if (block.type === "PRODUCT") {
 
+
+
       const data = block.data as {
 
+
+
         productId?: unknown;
+
+
 
       };
 
@@ -435,29 +871,63 @@ const raw =
 
 
 
+
+
+
+
+
+
       if (
+
+
 
         typeof data.productId !== "string" ||
 
+
+
         !data.productId
+
+
 
       ) {
 
+
+
         return {
+
+
 
           ok: false,
 
 
 
+
+
+
+
           message:
+
+
 
             "A product block is missing its product.",
 
+
+
         };
+
+
 
       }
 
+
+
     }
+
+
+
+
+
+
 
 
 
@@ -465,23 +935,43 @@ const raw =
 
     /*
 
+
+
      * PRODUCT GRID
+
+
 
      */
 
 
 
+
+
+
+
     if (
+
+
 
       block.type ===
 
+
+
       "PRODUCT_GRID"
+
+
 
     ) {
 
+
+
       const data = block.data as {
 
+
+
         productIds?: unknown;
+
+
 
       };
 
@@ -489,47 +979,97 @@ const raw =
 
 
 
+
+
+
+
+
+
       if (
+
+
 
         !Array.isArray(
 
+
+
           data.productIds
+
+
 
         ) ||
 
+
+
         data.productIds.length ===
+
+
 
           0 ||
 
+
+
         !data.productIds.every(
+
+
 
           (productId) =>
 
+
+
             typeof productId ===
+
+
 
               "string" &&
 
+
+
             productId.length > 0
+
+
 
         )
 
+
+
       ) {
 
+
+
         return {
+
+
 
           ok: false,
 
 
 
+
+
+
+
           message:
+
+
 
             "A product grid must contain at least one valid product.",
 
+
+
         };
+
+
 
       }
 
+
+
     }
+
+
+
+
 
 
 
@@ -539,15 +1079,31 @@ const raw =
 
 
 
+
+
+
+
+
+
   /*
 
+
+
    * Build ArticleProduct relations
+
+
 
    */
 
 
 
+
+
+
+
   const productRelations =
+
+
 
     getProductRelations(blocks);
 
@@ -555,27 +1111,55 @@ const raw =
 
 
 
+
+
+
+
+
+
   /*
 
+
+
    * Validate products still exist and are published
+
+
 
    */
 
 
 
+
+
+
+
   if (
+
+
 
     productRelations.length > 0
 
+
+
   ) {
+
+
 
     const productIds =
 
+
+
       productRelations.map(
+
+
 
         (item) =>
 
+
+
           item.productId
+
+
 
       );
 
@@ -583,31 +1167,63 @@ const raw =
 
 
 
+
+
+
+
+
+
     const existingProducts =
+
+
 
       await prisma.product.findMany({
 
+
+
         where: {
+
+
 
           id: {
 
+
+
             in: productIds,
+
+
 
           },
 
 
 
+
+
+
+
           status: "PUBLISHED",
 
+
+
         },
+
+
+
+
 
 
 
         select: {
 
+
+
           id: true,
 
+
+
         },
+
+
 
       });
 
@@ -615,27 +1231,55 @@ const raw =
 
 
 
+
+
+
+
+
+
     if (
+
+
 
       existingProducts.length !==
 
+
+
       productIds.length
+
+
 
     ) {
 
+
+
       return {
+
+
 
         ok: false,
 
 
 
+
+
+
+
         message:
+
+
 
           "One or more inserted products are no longer available.",
 
+
+
       };
 
+
+
     }
+
+
 
   }
 
@@ -643,35 +1287,77 @@ const raw =
 
 
 
+
+
+
+
+
+
   /*
 
+
+
    * Load current article
+
+
 
    */
 
 
 
+
+
+
+
   const article =
+
+
 
     await prisma.article.findUnique({
 
+
+
       where: {
+
+
 
         id,
 
+
+
       },
+
+
+
+
 
 
 
       select: {
 
+
+
         slug: true,
+
+
 
         categoryId: true,
 
+        authorId: true,
+
+
+
       },
 
+
+
     });
+
+
+
+
+
+
 
 
 
@@ -679,19 +1365,104 @@ const raw =
 
   if (!article) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "Article not found.",
 
+
+
     };
 
+
+
   }
+  /*
+   * AUTHOR OWNERSHIP
+   *
+   * ADMIN and EDITOR may edit any article.
+   *
+   * AUTHOR may only edit an article already
+   * owned by the Author record linked to their
+   * own User account, and may not reassign it.
+   */
+
+  if (
+    session.role ===
+    "AUTHOR"
+  ) {
+    const ownAuthor =
+      await prisma.author.findUnique({
+        where: {
+          userId:
+            session.userId,
+        },
+
+        select: {
+          id: true,
+        },
+      });
+
+
+    if (!ownAuthor) {
+      return {
+        ok: false,
+
+        message:
+          "Your account is not linked to an author profile.",
+      };
+    }
+
+
+    if (
+      article.authorId !==
+      ownAuthor.id
+    ) {
+      return {
+        ok: false,
+
+        message:
+          "You can only edit your own articles.",
+      };
+    }
+
+
+    if (
+      parsed.data.authorId !==
+      ownAuthor.id
+    ) {
+      return {
+        ok: false,
+
+        message:
+          "You cannot reassign this article to another author.",
+      };
+    }
+  }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -699,41 +1470,83 @@ const raw =
 
   /*
 
+
+
    * Prevent duplicate article slug
+
+
 
    */
 
 
 
+
+
+
+
   const duplicate =
+
+
 
     await prisma.article.findFirst({
 
+
+
       where: {
 
+
+
         slug:
+
+
 
           parsed.data.slug,
 
 
 
+
+
+
+
         NOT: {
+
+
 
           id,
 
+
+
         },
 
+
+
       },
+
+
+
+
 
 
 
       select: {
 
+
+
         id: true,
+
+
 
       },
 
+
+
     });
+
+
+
+
+
+
 
 
 
@@ -741,17 +1554,31 @@ const raw =
 
   if (duplicate) {
 
+
+
     return {
+
+
 
       ok: false,
 
 
 
+
+
+
+
       message:
+
+
 
         "That article slug is already in use.",
 
+
+
     };
+
+
 
   }
 
@@ -759,39 +1586,83 @@ const raw =
 
 
 
+
+
+
+
+
+
   /*
 
+
+
    * Update article transaction
+
+
 
    */
 
 
 
+
+
+
+
   const updated =
 
+
+
     await prisma.$transaction(
+
+
 
       async (tx) => {
 
 
 
+
+
+
+
         /*
+
+
 
          * Replace article blocks
 
+
+
          */
+
+
+
+
 
 
 
         await tx.articleBlock.deleteMany({
 
+
+
           where: {
+
+
 
             articleId: id,
 
+
+
           },
 
+
+
         });
+
+
+
+
+
+
 
 
 
@@ -799,21 +1670,43 @@ const raw =
 
         /*
 
+
+
          * Replace article/product relations
+
+
 
          */
 
 
 
+
+
+
+
         await tx.articleProduct.deleteMany({
+
+
 
           where: {
 
+
+
             articleId: id,
+
+
 
           },
 
+
+
         });
+
+
+
+
+
+
 
 
 
@@ -821,11 +1714,21 @@ const raw =
 
         return tx.article.update({
 
+
+
           where: {
+
+
 
             id,
 
+
+
           },
+
+
+
+
 
 
 
@@ -833,69 +1736,137 @@ const raw =
 
 
 
+
+
+
+
             title:
+
+
 
               parsed.data.title,
 
 
 
+
+
+
+
             slug:
+
+
 
               parsed.data.slug,
 
 
 
+
+
+
+
             subtitle:
+
+
 
               parsed.data.subtitle ||
 
+
+
               null,
+
+
+
+
 
 
 
             excerpt:
 
+
+
               parsed.data.excerpt ||
 
+
+
               null,
+
+
+
+
 
 
 
             featuredImage:
 
+
+
               parsed.data
 
+
+
                 .featuredImage ||
+
+
 
               null,
 
 
 
+
+
+
+
             categoryId:
+
+
 
               parsed.data.categoryId,
 
 
 
+
+
+
+
             authorId:
+
+
 
               parsed.data.authorId,
 
 
 
+
+
+
+
             status:
+
+
 
               parsed.data.status,
 
 
 
+
+
+
+
             publishedAt:
+
+
 
               parsed.data.status ===
 
+
+
               "PUBLISHED"
 
+
+
                 ? new Date()
+
+
 
                 : null,
 
@@ -903,35 +1874,73 @@ const raw =
 
 
 
+
+
+
+
+
+
             /*
 
+
+
              * ARTICLE BLOCKS
+
+
 
              */
 
 
 
+
+
+
+
             blocks: {
+
+
 
               create:
 
+
+
                 blocks.map(
+
+
 
                   (
 
+
+
                     block,
+
+
 
                     position
 
+
+
                   ) => ({
+
+
 
                     type:
 
+
+
                       ArticleBlockType[
+
+
 
                         block.type as keyof typeof ArticleBlockType
 
+
+
                       ],
+
+
+
+
 
 
 
@@ -939,13 +1948,25 @@ const raw =
 
 
 
+
+
+
+
                     data:
+
+
 
                       block.data,
 
+
+
                   })
 
+
+
                 ),
+
+
 
             },
 
@@ -953,43 +1974,87 @@ const raw =
 
 
 
+
+
+
+
+
+
             /*
 
+
+
              * ARTICLE ↔ PRODUCT RELATIONS
+
+
 
              */
 
 
 
+
+
+
+
             relatedProducts:
+
+
 
               productRelations.length >
 
+
+
               0
+
+
 
                 ? {
 
+
+
                     create:
+
+
 
                       productRelations.map(
 
+
+
                         (product) => ({
 
+
+
                           productId:
+
+
 
                             product.productId,
 
 
 
+
+
+
+
                           position:
+
+
 
                             product.position,
 
+
+
                         })
+
+
 
                       ),
 
+
+
                   }
+
+
 
                 : undefined,
 
@@ -997,45 +2062,95 @@ const raw =
 
 
 
+
+
+
+
+
+
             /*
 
+
+
              * SEO
+
+
 
              */
 
 
 
+
+
+
+
             seo: {
+
+
 
               upsert: {
 
 
 
+
+
+
+
                 create: {
+
+
 
                   title:
 
+
+
                     parsed.data
 
+
+
                       .seoTitle ||
+
+
 
                     parsed.data.title,
 
 
 
+
+
+
+
                   description:
 
+
+
                     parsed.data
+
+
 
                       .seoDescription ||
 
+
+
                     parsed.data
+
+
 
                       .excerpt ||
 
+
+
                     null,
 
+
+
                 },
+
+
+
+
+
+
 
 
 
@@ -1043,43 +2158,83 @@ const raw =
 
                 update: {
 
+
+
                   title:
+
+
 
                     parsed.data
 
+
+
                       .seoTitle ||
+
+
 
                     parsed.data.title,
 
 
 
+
+
+
+
                   description:
 
+
+
                     parsed.data
+
+
 
                       .seoDescription ||
 
+
+
                     parsed.data
+
+
 
                       .excerpt ||
 
+
+
                     null,
+
+
 
                 },
 
 
 
+
+
+
+
               },
+
+
 
             },
 
 
 
+
+
+
+
           },
+
+
 
         });
 
+
+
       }
+
+
 
     );
 
@@ -1087,11 +2242,25 @@ const raw =
 
 
 
+
+
+
+
+
+
   /*
+
+
 
    * Revalidate public pages
 
+
+
    */
+
+
+
+
 
 
 
@@ -1099,21 +2268,45 @@ const raw =
 
 
 
+
+
+
+
   revalidatePath(
+
+
 
     "/articles"
 
+
+
   );
 
 
 
 
 
+
+
+
+
+
+
   revalidatePath(
+
+
 
     `/articles/${article.slug}`
 
+
+
   );
+
+
+
+
+
+
 
 
 
@@ -1121,9 +2314,19 @@ const raw =
 
   revalidatePath(
 
+
+
     `/articles/${updated.slug}`
 
+
+
   );
+
+
+
+
+
+
 
 
 
@@ -1131,33 +2334,67 @@ const raw =
 
   /*
 
+
+
    * Revalidate old category page
+
+
 
    */
 
 
 
+
+
+
+
   const oldCategory =
+
+
 
     await prisma.category.findUnique({
 
+
+
       where: {
+
+
 
         id:
 
+
+
           article.categoryId,
 
+
+
       },
+
+
+
+
 
 
 
       select: {
 
+
+
         slug: true,
+
+
 
       },
 
+
+
     });
+
+
+
+
+
+
 
 
 
@@ -1165,13 +2402,27 @@ const raw =
 
   if (oldCategory) {
 
+
+
     revalidatePath(
+
+
 
       `/${oldCategory.slug}`
 
+
+
     );
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1179,31 +2430,59 @@ const raw =
 
   /*
 
+
+
    * Revalidate new category page
+
+
 
    */
 
 
 
+
+
+
+
   const newCategory =
+
+
 
     await prisma.category.findUnique({
 
+
+
       where: {
+
+
 
         id:
 
+
+
           parsed.data.categoryId,
 
+
+
       },
+
+
+
+
 
 
 
       select: {
 
+
+
         slug: true,
 
+
+
       },
+
+
 
     });
 
@@ -1211,13 +2490,27 @@ const raw =
 
 
 
+
+
+
+
+
+
   if (newCategory) {
+
+
 
     revalidatePath(
 
+
+
       `/${newCategory.slug}`
 
+
+
     );
+
+
 
   }
 
@@ -1225,16 +2518,34 @@ const raw =
 
 
 
+
+
+
+
+
+
   return {
+
+
 
     ok: true,
 
 
 
+
+
+
+
     message:
+
+
 
       `Article “${updated.title}” updated.`,
 
+
+
   };
+
+
 
 }

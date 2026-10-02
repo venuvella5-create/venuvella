@@ -5,10 +5,47 @@ const SESSION_DURATION_SECONDS =
   60 * 60 * 12;
 
 
-type AdminSessionPayload = {
+export type AdminSessionRole =
+  | "ADMIN"
+  | "EDITOR"
+  | "AUTHOR"
+  | "ANALYST";
+
+
+export type AdminSessionPayload = {
+  userId: string;
   email: string;
+  role: AdminSessionRole;
   exp: number;
 };
+
+
+type AdminSessionInput = {
+  userId: string;
+  email: string;
+  role: AdminSessionRole;
+};
+
+
+const VALID_ROLES:
+  readonly AdminSessionRole[] = [
+    "ADMIN",
+    "EDITOR",
+    "AUTHOR",
+    "ANALYST",
+  ];
+
+
+function isValidRole(
+  value: unknown
+): value is AdminSessionRole {
+  return (
+    typeof value === "string" &&
+    VALID_ROLES.includes(
+      value as AdminSessionRole
+    )
+  );
+}
 
 
 function bytesToBase64Url(
@@ -17,7 +54,8 @@ function bytesToBase64Url(
   let binary = "";
 
   for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
+    binary +=
+      String.fromCharCode(byte);
   }
 
   return btoa(binary)
@@ -40,15 +78,16 @@ function base64UrlToBytes(
       ? ""
       : "=".repeat(
           4 -
-            (normalized.length %
-              4)
+            (normalized.length % 4)
         );
+
 
   const binary =
     atob(
       normalized +
         padding
     );
+
 
   return Uint8Array.from(
     binary,
@@ -95,12 +134,14 @@ async function signValue(
       secret
     );
 
+
   const signature =
     await crypto.subtle.sign(
       "HMAC",
       key,
       encodeText(value)
     );
+
 
   return bytesToBase64Url(
     new Uint8Array(
@@ -121,6 +162,7 @@ async function verifySignature(
         secret
       );
 
+
     return await crypto.subtle.verify(
       "HMAC",
       key,
@@ -129,6 +171,7 @@ async function verifySignature(
       ),
       encodeText(value)
     );
+
   } catch {
     return false;
   }
@@ -136,7 +179,8 @@ async function verifySignature(
 
 
 function encodePayload(
-  payload: AdminSessionPayload
+  payload:
+    AdminSessionPayload
 ) {
   return bytesToBase64Url(
     encodeText(
@@ -160,10 +204,12 @@ function decodePayload(
         value
       );
 
+
     const text =
       new TextDecoder().decode(
         bytes
       );
+
 
     const parsed =
       JSON.parse(
@@ -172,8 +218,15 @@ function decodePayload(
 
 
     if (
+      typeof parsed.userId !==
+        "string" ||
+      parsed.userId.length === 0 ||
       typeof parsed.email !==
         "string" ||
+      parsed.email.length === 0 ||
+      !isValidRole(
+        parsed.role
+      ) ||
       typeof parsed.exp !==
         "number"
     ) {
@@ -182,8 +235,14 @@ function decodePayload(
 
 
     return {
+      userId:
+        parsed.userId,
+
       email:
         parsed.email,
+
+      role:
+        parsed.role,
 
       exp:
         parsed.exp,
@@ -196,7 +255,7 @@ function decodePayload(
 
 
 export async function createAdminToken(
-  email: string,
+  session: AdminSessionInput,
   secret: string
 ) {
   const now =
@@ -208,7 +267,14 @@ export async function createAdminToken(
 
   const payload:
     AdminSessionPayload = {
-      email,
+      userId:
+        session.userId,
+
+      email:
+        session.email,
+
+      role:
+        session.role,
 
       exp:
         now +
@@ -244,10 +310,21 @@ export async function verifyAdminToken(
   }
 
 
+  const parts =
+    token.split(".");
+
+
+  if (
+    parts.length !== 2
+  ) {
+    return null;
+  }
+
+
   const [
     encodedPayload,
     signature,
-  ] = token.split(".");
+  ] = parts;
 
 
   if (

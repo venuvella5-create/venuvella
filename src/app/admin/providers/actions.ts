@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { ProviderStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
-import { requireAdminSession } from "@/lib/auth/require-admin";
+import { requireRole } from "@/lib/auth/require-admin";
 
 
 export type ProviderActionState = {
@@ -61,22 +61,28 @@ export async function createProvider(
   _previous: ProviderActionState,
   formData: FormData
 ): Promise<ProviderActionState> {
-  await requireAdminSession();
+  await requireRole([
+    "ADMIN",
+  ]);
+
 
   const name =
     String(
       formData.get("name") ?? ""
     ).trim();
 
+
   const rawSlug =
     String(
       formData.get("slug") ?? ""
     ).trim();
 
+
   const websiteUrl =
     optionalString(
       formData.get("websiteUrl")
     );
+
 
   const rawStatus =
     String(
@@ -197,11 +203,13 @@ export async function createProvider(
       message:
         `Provider “${provider.name}” created successfully.`,
     };
+
   } catch (error) {
     console.error(
       "Failed to create provider:",
       error
     );
+
 
     return {
       ok: false,
@@ -216,27 +224,34 @@ export async function updateProvider(
   _previous: ProviderActionState,
   formData: FormData
 ): Promise<ProviderActionState> {
-  await requireAdminSession();
+  await requireRole([
+    "ADMIN",
+  ]);
+
 
   const id =
     String(
       formData.get("id") ?? ""
     ).trim();
 
+
   const name =
     String(
       formData.get("name") ?? ""
     ).trim();
+
 
   const rawSlug =
     String(
       formData.get("slug") ?? ""
     ).trim();
 
+
   const websiteUrl =
     optionalString(
       formData.get("websiteUrl")
     );
+
 
   const rawStatus =
     String(
@@ -399,11 +414,13 @@ export async function updateProvider(
       message:
         `Provider “${updated.name}” updated successfully.`,
     };
+
   } catch (error) {
     console.error(
       "Failed to update provider:",
       error
     );
+
 
     return {
       ok: false,

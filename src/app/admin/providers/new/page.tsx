@@ -1,9 +1,19 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 import { AffiliateProviderForm } from "@/components/admin/AffiliateProviderForm";
+import { requirePageRole } from "@/lib/auth/require-admin";
 
 
-export default function NewProviderPage() {
+export const dynamic =
+  "force-dynamic";
+
+
+export default async function NewProviderPage() {
+  await requirePageRole([
+    "ADMIN",
+  ]);
+
+
   return (
     <main className="min-h-screen bg-[#efeee9] py-10">
 
@@ -13,7 +23,7 @@ export default function NewProviderPage() {
           href="/admin/providers"
           className="admin-link"
         >
-          ← Providers
+          â† Providers
         </Link>
 
 

@@ -9,10 +9,22 @@ import {
 } from "next/navigation";
 
 import {
+  UserRole,
+} from "@prisma/client";
+
+import {
   createAdminToken,
   getAdminCookieName,
   getAdminSessionDurationSeconds,
 } from "@/lib/auth/admin-token";
+
+import {
+  verifyPassword,
+} from "@/lib/auth/password";
+
+import {
+  prisma,
+} from "@/lib/db/prisma";
 
 
 export type AdminLoginState = {
@@ -38,8 +50,7 @@ function safeCompare(
 
   for (
     let index = 0;
-    index <
-    first.length;
+    index < first.length;
     index += 1
   ) {
     result |=
@@ -98,25 +109,13 @@ export async function loginAdminAction(
   formData: FormData
 ): Promise<AdminLoginState> {
 
-  const configuredEmail =
-    process.env.ADMIN_EMAIL;
-
-
-  const configuredPassword =
-    process.env.ADMIN_PASSWORD;
-
-
   const sessionSecret =
     process.env.ADMIN_SESSION_SECRET;
 
 
-  if (
-    !configuredEmail ||
-    !configuredPassword ||
-    !sessionSecret
-  ) {
+  if (!sessionSecret) {
     console.error(
-      "Admin authentication environment variables are not configured."
+      "ADMIN_SESSION_SECRET is not configured."
     );
 
 
@@ -160,25 +159,155 @@ export async function loginAdminAction(
   }
 
 
-  const emailMatches =
-    safeCompare(
-      email,
-      configuredEmail
-        .trim()
-        .toLowerCase()
-    );
+  /*
+   * First attempt normal database-backed
+   * staff authentication.
+   */
 
+  const existingUser =
+    await prisma.user.findUnique({
+      where: {
+        email,
+      },
 
-  const passwordMatches =
-    safeCompare(
-      password,
-      configuredPassword
-    );
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        passwordHash: true,
+        isActive: true,
+      },
+    });
 
 
   if (
-    !emailMatches ||
-    !passwordMatches
+    existingUser &&
+    existingUser.isActive &&
+    existingUser.passwordHash
+  ) {
+    const passwordMatches =
+      await verifyPassword(
+        password,
+        existingUser.passwordHash
+      );
+
+
+    if (passwordMatches) {
+
+      await prisma.user.update({
+        where: {
+          id:
+            existingUser.id,
+        },
+
+        data: {
+          lastLoginAt:
+            new Date(),
+        },
+      });
+
+
+      const token =
+        await createAdminToken(
+          {
+            userId:
+              existingUser.id,
+
+            email:
+              existingUser.email,
+
+            role:
+              existingUser.role,
+          },
+
+          sessionSecret
+        );
+
+
+      const cookieStore =
+        await cookies();
+
+
+      cookieStore.set(
+        getAdminCookieName(),
+        token,
+        {
+          httpOnly: true,
+
+          secure:
+            process.env.NODE_ENV ===
+            "production",
+
+          sameSite:
+            "lax",
+
+          path:
+            "/",
+
+          maxAge:
+            getAdminSessionDurationSeconds(),
+        }
+      );
+
+
+      const nextPath =
+        sanitizeNextPath(
+          formData.get(
+            "next"
+          )
+        );
+
+
+      redirect(
+        nextPath
+      );
+    }
+  }
+
+
+  /*
+   * Bootstrap / emergency administrator.
+   *
+   * The existing ADMIN_EMAIL and
+   * ADMIN_PASSWORD environment credentials
+   * remain supported so the current master
+   * administrator is not locked out.
+   *
+   * Additional staff accounts authenticate
+   * using their database passwordHash.
+   */
+
+  const configuredEmail =
+    process.env.ADMIN_EMAIL
+      ?.trim()
+      .toLowerCase();
+
+
+  const configuredPassword =
+    process.env.ADMIN_PASSWORD;
+
+
+  const masterEmailMatches =
+    configuredEmail
+      ? safeCompare(
+          email,
+          configuredEmail
+        )
+      : false;
+
+
+  const masterPasswordMatches =
+    configuredPassword
+      ? safeCompare(
+          password,
+          configuredPassword
+        )
+      : false;
+
+
+  if (
+    !masterEmailMatches ||
+    !masterPasswordMatches
   ) {
     return {
       ok: false,
@@ -189,9 +318,69 @@ export async function loginAdminAction(
   }
 
 
+  /*
+   * Ensure the environment-based master
+   * administrator exists in the database.
+   *
+   * It always retains ADMIN access and can
+   * recover access even before staff account
+   * management has been configured.
+   */
+
+  const masterUser =
+    await prisma.user.upsert({
+      where: {
+        email,
+      },
+
+      update: {
+        role:
+          UserRole.ADMIN,
+
+        isActive:
+          true,
+
+        lastLoginAt:
+          new Date(),
+      },
+
+      create: {
+        email,
+
+        name:
+          "Venuvella Admin",
+
+        role:
+          UserRole.ADMIN,
+
+        isActive:
+          true,
+
+        lastLoginAt:
+          new Date(),
+      },
+
+      select: {
+        id: true,
+        email: true,
+        role: true,
+      },
+    });
+
+
   const token =
     await createAdminToken(
-      email,
+      {
+        userId:
+          masterUser.id,
+
+        email:
+          masterUser.email,
+
+        role:
+          masterUser.role,
+      },
+
       sessionSecret
     );
 
@@ -237,6 +426,7 @@ export async function loginAdminAction(
 
 
 export async function logoutAdminAction() {
+
   const cookieStore =
     await cookies();
 

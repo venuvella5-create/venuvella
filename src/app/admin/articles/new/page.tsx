@@ -1,38 +1,101 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
-import { prisma } from "@/lib/db/prisma";
 import { ArticleEditor } from "@/components/admin/ArticleEditor";
+import { requirePageRole } from "@/lib/auth/require-admin";
+import { prisma } from "@/lib/db/prisma";
+
+
+export const dynamic =
+  "force-dynamic";
 
 
 export default async function NewArticlePage() {
-  const [categories, authors, products] = await Promise.all([
+  const session =
+    await requirePageRole([
+      "ADMIN",
+      "EDITOR",
+      "AUTHOR",
+    ]);
+
+
+  const isAuthor =
+    session.role ===
+    "AUTHOR";
+
+
+  const ownAuthor =
+    isAuthor
+      ? await prisma.author.findUnique({
+          where: {
+            userId:
+              session.userId,
+          },
+
+          select: {
+            id: true,
+            name: true,
+          },
+        })
+      : null;
+
+
+  const [
+    categories,
+    authors,
+    products,
+  ] = await Promise.all([
+
     prisma.category.findMany({
       orderBy: {
-        sortOrder: "asc",
+        sortOrder:
+          "asc",
       },
+
       select: {
         id: true,
         name: true,
       },
     }),
 
-    prisma.author.findMany({
-      orderBy: {
-        name: "asc",
-      },
-      select: {
-        id: true,
-        name: true,
-      },
-    }),
+
+    isAuthor
+      ? Promise.resolve(
+          ownAuthor
+            ? [
+                {
+                  id:
+                    ownAuthor.id,
+
+                  name:
+                    ownAuthor.name,
+                },
+              ]
+            : []
+        )
+      : prisma.author.findMany({
+          orderBy: {
+            name:
+              "asc",
+          },
+
+          select: {
+            id: true,
+            name: true,
+          },
+        }),
+
 
     prisma.product.findMany({
       where: {
-        status: "PUBLISHED",
+        status:
+          "PUBLISHED",
       },
+
       orderBy: {
-        name: "asc",
+        name:
+          "asc",
       },
+
       select: {
         id: true,
         name: true,
@@ -52,6 +115,7 @@ export default async function NewArticlePage() {
         },
       },
     }),
+
   ]);
 
 
@@ -64,7 +128,7 @@ export default async function NewArticlePage() {
           href="/admin/articles"
           className="admin-link"
         >
-          ← Articles
+          â† Articles
         </Link>
 
 
@@ -74,18 +138,64 @@ export default async function NewArticlePage() {
             Content / New article
           </p>
 
+
           <h1 className="display-serif text-5xl">
             Create an article
           </h1>
 
+
+          {isAuthor && ownAuthor && (
+            <p className="mt-4 text-sm text-[var(--muted)]">
+              Creating as{" "}
+              <span className="font-medium text-[var(--ink)]">
+                {ownAuthor.name}
+              </span>
+            </p>
+          )}
+
         </div>
 
 
-        <ArticleEditor
-          categories={categories}
-          authors={authors}
-          products={products}
-        />
+        {isAuthor && !ownAuthor ? (
+
+          <section className="rounded-2xl border border-amber-300 bg-amber-50 p-6">
+
+            <p className="admin-eyebrow">
+              Author account
+            </p>
+
+
+            <h2 className="display-serif mt-2 text-3xl">
+              Author profile required
+            </h2>
+
+
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+              Your user account is not linked to an
+              author profile. An administrator must
+              connect your account to an author profile
+              before you can create articles.
+            </p>
+
+
+            <Link
+              href="/admin/articles"
+              className="admin-secondary mt-6 inline-flex"
+            >
+              Back to articles
+            </Link>
+
+          </section>
+
+        ) : (
+
+          <ArticleEditor
+            categories={categories}
+            authors={authors}
+            products={products}
+          />
+
+        )}
 
       </div>
 

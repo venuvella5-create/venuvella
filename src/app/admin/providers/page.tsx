@@ -1,5 +1,6 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
+import { requirePageRole } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/db/prisma";
 
 
@@ -8,6 +9,11 @@ export const dynamic =
 
 
 export default async function ProvidersPage() {
+  await requirePageRole([
+    "ADMIN",
+  ]);
+
+
   const providers =
     await prisma.affiliateProvider.findMany({
       orderBy: {

@@ -7,12 +7,14 @@ import {
 } from "@/lib/affiliate/provider-sync/runProviderSync";
 
 import {
-  requireAdminSession,
+  requireRole,
 } from "@/lib/auth/require-admin";
 
 
 export async function runProviderSyncAction(): Promise<void> {
-  await requireAdminSession();
+  await requireRole([
+    "ADMIN",
+  ]);
 
   try {
     await runProviderSync();
