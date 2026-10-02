@@ -51,6 +51,77 @@ function isValidOptionalUrl(
 }
 
 
+function isSecureUrl(
+  value: string
+) {
+  try {
+    const url = new URL(value);
+
+    return url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+
+function getProviderKind(
+  providerName: string
+) {
+  const normalized =
+    providerName
+      .trim()
+      .toLowerCase();
+
+  if (
+    normalized.includes(
+      "amazon"
+    )
+  ) {
+    return "amazon";
+  }
+
+  if (
+    normalized.includes(
+      "walmart"
+    )
+  ) {
+    return "walmart";
+  }
+
+  return "generic";
+}
+
+
+function normalizeExternalProductId(
+  providerKind:
+    | "amazon"
+    | "walmart"
+    | "generic",
+  value: string
+) {
+  const normalized =
+    value.trim();
+
+  if (
+    providerKind ===
+    "amazon"
+  ) {
+    return normalized.toUpperCase();
+  }
+
+  return normalized;
+}
+
+
+function isValidAmazonAsin(
+  value: string
+) {
+  return /^[A-Z0-9]{10}$/.test(
+    value
+  );
+}
+
+
 async function revalidateProductPaths(
   productId: string
 ) {
@@ -81,6 +152,14 @@ async function revalidateProductPaths(
   );
 
   revalidatePath(
+    "/admin/provider-sync"
+  );
+
+  revalidatePath(
+    "/admin/affiliate-ops"
+  );
+
+  revalidatePath(
     `/products/${product.slug}`
   );
 
@@ -94,6 +173,7 @@ export async function saveProviderMapping(
   _previous: ProviderMappingActionState,
   formData: FormData
 ): Promise<ProviderMappingActionState> {
+
   const mappingId =
     String(
       formData.get("mappingId") ?? ""
@@ -112,9 +192,11 @@ export async function saveProviderMapping(
     ).trim();
 
 
-  const externalProductId =
+  const rawExternalProductId =
     String(
-      formData.get("externalProductId") ?? ""
+      formData.get(
+        "externalProductId"
+      ) ?? ""
     ).trim();
 
 
@@ -150,23 +232,28 @@ export async function saveProviderMapping(
 
   const rawSyncStatus =
     String(
-      formData.get("syncStatus") ??
-        "PENDING"
+      formData.get(
+        "syncStatus"
+      ) ?? "SUCCESS"
     ).trim();
-const rawPriority =
-  String(
-    formData.get("priority") ??
-      "100"
-  ).trim();
+
+
+  const rawPriority =
+    String(
+      formData.get(
+        "priority"
+      ) ?? "100"
+    ).trim();
+
 
   /*
-   * Required fields
+   * BASIC REQUIRED FIELDS
    */
 
   if (
     !productId ||
     !providerId ||
-    !externalProductId
+    !rawExternalProductId
   ) {
     return {
       ok: false,
@@ -178,7 +265,7 @@ const rawPriority =
 
 
   /*
-   * URL validation
+   * GENERAL URL VALIDATION
    */
 
   if (
@@ -210,7 +297,7 @@ const rawPriority =
 
 
   /*
-   * Price validation
+   * PRICE
    */
 
   let price:
@@ -246,7 +333,7 @@ const rawPriority =
 
 
   /*
-   * Currency validation
+   * CURRENCY
    */
 
   let currency:
@@ -279,7 +366,7 @@ const rawPriority =
 
 
   /*
-   * Sync status validation
+   * SYNC STATUS
    */
 
   if (
@@ -297,25 +384,35 @@ const rawPriority =
     };
   }
 
-  const priority =
-  Number(rawPriority);
-
-
-if (
-  !Number.isInteger(priority) ||
-  priority < 0 ||
-  priority > 9999
-) {
-  return {
-    ok: false,
-
-    message:
-      "Priority must be a whole number between 0 and 9999.",
-  };
-}
 
   /*
-   * Validate product
+   * PRIORITY
+   */
+
+  const priority =
+    Number(
+      rawPriority
+    );
+
+
+  if (
+    !Number.isInteger(
+      priority
+    ) ||
+    priority < 0 ||
+    priority > 9999
+  ) {
+    return {
+      ok: false,
+
+      message:
+        "Priority must be a whole number between 0 and 9999.",
+    };
+  }
+
+
+  /*
+   * PRODUCT
    */
 
   const product =
@@ -341,7 +438,7 @@ if (
 
 
   /*
-   * Validate provider
+   * PROVIDER
    */
 
   const provider =
@@ -353,6 +450,7 @@ if (
       select: {
         id: true,
         name: true,
+        active: true,
       },
     });
 
@@ -367,8 +465,164 @@ if (
   }
 
 
+  const providerKind =
+    getProviderKind(
+      provider.name
+    );
+
+
+  const externalProductId =
+    normalizeExternalProductId(
+      providerKind,
+      rawExternalProductId
+    );
+
+
   /*
-   * Prevent duplicate provider/external ID
+   * AMAZON MANUAL VALIDATION
+   */
+
+  if (
+    providerKind ===
+    "amazon"
+  ) {
+
+    if (
+      !isValidAmazonAsin(
+        externalProductId
+      )
+    ) {
+      return {
+        ok: false,
+
+        message:
+          "Amazon mappings require a valid 10-character ASIN.",
+      };
+    }
+
+
+    if (!affiliateUrl) {
+      return {
+        ok: false,
+
+        message:
+          "Amazon requires an affiliate URL before the mapping can be saved.",
+      };
+    }
+
+
+    if (
+      !isSecureUrl(
+        affiliateUrl
+      )
+    ) {
+      return {
+        ok: false,
+
+        message:
+          "Amazon affiliate URLs must use HTTPS.",
+      };
+    }
+
+
+    if (
+      productUrl &&
+      !isSecureUrl(
+        productUrl
+      )
+    ) {
+      return {
+        ok: false,
+
+        message:
+          "Amazon product URLs must use HTTPS.",
+      };
+    }
+
+
+    if (
+      price &&
+      !currency
+    ) {
+      currency =
+        "USD";
+    }
+  }
+
+
+  /*
+   * WALMART MANUAL VALIDATION
+   */
+
+  if (
+    providerKind ===
+    "walmart"
+  ) {
+
+    if (
+      externalProductId.length <
+      2
+    ) {
+      return {
+        ok: false,
+
+        message:
+          "Enter a valid Walmart item or product ID.",
+      };
+    }
+
+
+    if (!affiliateUrl) {
+      return {
+        ok: false,
+
+        message:
+          "Walmart requires an affiliate URL before the mapping can be saved.",
+      };
+    }
+
+
+    if (
+      !isSecureUrl(
+        affiliateUrl
+      )
+    ) {
+      return {
+        ok: false,
+
+        message:
+          "Walmart affiliate URLs must use HTTPS.",
+      };
+    }
+
+
+    if (
+      productUrl &&
+      !isSecureUrl(
+        productUrl
+      )
+    ) {
+      return {
+        ok: false,
+
+        message:
+          "Walmart product URLs must use HTTPS.",
+      };
+    }
+
+
+    if (
+      price &&
+      !currency
+    ) {
+      currency =
+        "USD";
+    }
+  }
+
+
+  /*
+   * DUPLICATE MAPPING
    */
 
   const duplicate =
@@ -380,7 +634,8 @@ if (
         ...(mappingId
           ? {
               NOT: {
-                id: mappingId,
+                id:
+                  mappingId,
               },
             }
           : {}),
@@ -405,14 +660,16 @@ if (
   try {
 
     /*
-     * EDIT EXISTING MAPPING
+     * UPDATE MAPPING
      */
 
     if (mappingId) {
+
       const existing =
         await prisma.providerProduct.findUnique({
           where: {
-            id: mappingId,
+            id:
+              mappingId,
           },
 
           select: {
@@ -447,18 +704,23 @@ if (
 
       await prisma.providerProduct.update({
         where: {
-          id: mappingId,
+          id:
+            mappingId,
         },
 
         data: {
           providerId,
+
           externalProductId,
 
           productUrl,
+
           affiliateUrl,
 
           price,
+
           currency,
+
           availability,
 
           priority,
@@ -473,24 +735,29 @@ if (
               : null,
         },
       });
-    }
 
-    /*
-     * CREATE NEW MAPPING
-     */
+    } else {
 
-    else {
+      /*
+       * CREATE MAPPING
+       */
+
       await prisma.providerProduct.create({
         data: {
           productId,
+
           providerId,
+
           externalProductId,
 
           productUrl,
+
           affiliateUrl,
 
           price,
+
           currency,
+
           availability,
 
           priority,
@@ -508,6 +775,7 @@ if (
     }
 
   } catch (error) {
+
     console.error(
       "Failed to save provider mapping:",
       error
@@ -542,15 +810,20 @@ if (
 export async function deleteProviderMapping(
   formData: FormData
 ) {
+
   const mappingId =
     String(
-      formData.get("mappingId") ?? ""
+      formData.get(
+        "mappingId"
+      ) ?? ""
     ).trim();
 
 
   const productId =
     String(
-      formData.get("productId") ?? ""
+      formData.get(
+        "productId"
+      ) ?? ""
     ).trim();
 
 
@@ -565,7 +838,8 @@ export async function deleteProviderMapping(
   const mapping =
     await prisma.providerProduct.findUnique({
       where: {
-        id: mappingId,
+        id:
+          mappingId,
       },
 
       select: {
@@ -589,12 +863,16 @@ export async function deleteProviderMapping(
 
 
   try {
+
     await prisma.providerProduct.delete({
       where: {
-        id: mappingId,
+        id:
+          mappingId,
       },
     });
+
   } catch (error) {
+
     console.error(
       "Failed to delete provider mapping:",
       error
