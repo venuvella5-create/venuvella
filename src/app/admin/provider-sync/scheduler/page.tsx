@@ -325,9 +325,19 @@ export default async function ProviderSyncSchedulerPage() {
     true;
 
 
+  /*
+   * IMPORTANT:
+   *
+   * The fallback is now ONCE DAILY
+   * because the Vercel Hobby cron
+   * is configured as:
+   *
+   * 0 0 * * *
+   */
+
   const schedule =
     job?.schedule ??
-    "0 */6 * * *";
+    "0 0 * * *";
 
 
   const nextExpectedRun =

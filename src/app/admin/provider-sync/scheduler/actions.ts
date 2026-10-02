@@ -9,29 +9,38 @@ const JOB_NAME =
   "provider-product-sync";
 
 
-const ALLOWED_SCHEDULES = {
-  "0 */6 * * *":
-    "Every 6 hours",
-
-  "0 */12 * * *":
-    "Every 12 hours",
-
-  "0 0 * * *":
-    "Once daily",
-
-  "0 0 * * 1":
-    "Once weekly",
-} as const;
+const DEFAULT_SCHEDULE =
+  "0 0 * * *";
 
 
-async function ensureJob() {
-  return prisma.automationJob.upsert({
+const ALLOWED_SCHEDULES = [
+  "0 */6 * * *",
+  "0 */12 * * *",
+  "0 0 * * *",
+  "0 0 * * 1",
+] as const;
+
+
+function isAllowedSchedule(
+  value: string
+) {
+  return ALLOWED_SCHEDULES.includes(
+    value as typeof ALLOWED_SCHEDULES[number]
+  );
+}
+
+
+export async function enableProviderSyncAction(): Promise<void> {
+  await prisma.automationJob.upsert({
     where: {
       name:
         JOB_NAME,
     },
 
-    update: {},
+    update: {
+      enabled:
+        true,
+    },
 
     create: {
       name:
@@ -41,25 +50,7 @@ async function ensureJob() {
         true,
 
       schedule:
-        "0 */6 * * *",
-    },
-  });
-}
-
-
-export async function enableProviderSyncAction(): Promise<void> {
-  await ensureJob();
-
-
-  await prisma.automationJob.update({
-    where: {
-      name:
-        JOB_NAME,
-    },
-
-    data: {
-      enabled:
-        true,
+        DEFAULT_SCHEDULE,
     },
   });
 
@@ -75,18 +66,26 @@ export async function enableProviderSyncAction(): Promise<void> {
 
 
 export async function disableProviderSyncAction(): Promise<void> {
-  await ensureJob();
-
-
-  await prisma.automationJob.update({
+  await prisma.automationJob.upsert({
     where: {
       name:
         JOB_NAME,
     },
 
-    data: {
+    update: {
       enabled:
         false,
+    },
+
+    create: {
+      name:
+        JOB_NAME,
+
+      enabled:
+        false,
+
+      schedule:
+        DEFAULT_SCHEDULE,
     },
   });
 
@@ -104,40 +103,61 @@ export async function disableProviderSyncAction(): Promise<void> {
 export async function updateProviderSyncScheduleAction(
   formData: FormData
 ): Promise<void> {
-  const schedule =
-    formData
-      .get("schedule")
-      ?.toString()
-      .trim();
-
-
-  if (!schedule) {
-    return;
-  }
+  const rawSchedule =
+    formData.get(
+      "schedule"
+    );
 
 
   if (
-    !Object.prototype.hasOwnProperty.call(
-      ALLOWED_SCHEDULES,
-      schedule
-    )
+    typeof rawSchedule !==
+    "string"
   ) {
     throw new Error(
-      "Unsupported provider sync schedule."
+      "Schedule is required."
     );
   }
 
 
-  await ensureJob();
+  const schedule =
+    rawSchedule.trim();
 
 
-  await prisma.automationJob.update({
+  if (
+    !isAllowedSchedule(
+      schedule
+    )
+  ) {
+    throw new Error(
+      `Unsupported provider sync schedule: ${schedule}`
+    );
+  }
+
+
+  /*
+   * Upsert directly with the selected
+   * schedule so there is no separate
+   * ensure/create operation that can leave
+   * the job using an old/default value.
+   */
+
+  await prisma.automationJob.upsert({
     where: {
       name:
         JOB_NAME,
     },
 
-    data: {
+    update: {
+      schedule,
+    },
+
+    create: {
+      name:
+        JOB_NAME,
+
+      enabled:
+        true,
+
       schedule,
     },
   });
