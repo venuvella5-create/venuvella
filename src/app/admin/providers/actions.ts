@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { ProviderStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
+import { requireAdminSession } from "@/lib/auth/require-admin";
 
 
 export type ProviderActionState = {
@@ -60,6 +61,8 @@ export async function createProvider(
   _previous: ProviderActionState,
   formData: FormData
 ): Promise<ProviderActionState> {
+  await requireAdminSession();
+
   const name =
     String(
       formData.get("name") ?? ""
@@ -213,6 +216,8 @@ export async function updateProvider(
   _previous: ProviderActionState,
   formData: FormData
 ): Promise<ProviderActionState> {
+  await requireAdminSession();
+
   const id =
     String(
       formData.get("id") ?? ""

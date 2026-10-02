@@ -8,6 +8,7 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
+import { requireAdminSession } from "@/lib/auth/require-admin";
 import { articleInputSchema } from "@/lib/validation/content";
 
 
@@ -118,6 +119,7 @@ export async function createArticle(
   _previous: ArticleActionState,
   formData: FormData
 ): Promise<ArticleActionState> {
+  await requireAdminSession();
 
   const raw =
     Object.fromEntries(

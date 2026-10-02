@@ -6,8 +6,14 @@ import {
   runProviderSync,
 } from "@/lib/affiliate/provider-sync/runProviderSync";
 
+import {
+  requireAdminSession,
+} from "@/lib/auth/require-admin";
+
 
 export async function runProviderSyncAction(): Promise<void> {
+  await requireAdminSession();
+
   try {
     await runProviderSync();
   } catch (error) {

@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db/prisma";
+import {
+  requireAdminSession,
+} from "@/lib/auth/require-admin";
 
 
 const JOB_NAME =
@@ -31,6 +34,8 @@ function isAllowedSchedule(
 
 
 export async function enableProviderSyncAction(): Promise<void> {
+  await requireAdminSession();
+
   await prisma.automationJob.upsert({
     where: {
       name:
@@ -66,6 +71,8 @@ export async function enableProviderSyncAction(): Promise<void> {
 
 
 export async function disableProviderSyncAction(): Promise<void> {
+  await requireAdminSession();
+
   await prisma.automationJob.upsert({
     where: {
       name:
@@ -103,6 +110,8 @@ export async function disableProviderSyncAction(): Promise<void> {
 export async function updateProviderSyncScheduleAction(
   formData: FormData
 ): Promise<void> {
+  await requireAdminSession();
+
   const rawSchedule =
     formData.get(
       "schedule"
