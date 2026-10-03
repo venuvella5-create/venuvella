@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -282,6 +282,9 @@ export default async function ProductDetailPage({
     notFound();
   }
 
+  const productSlug =
+  product.slug;
+
 
   const relatedProducts =
     await getRelatedProducts(
@@ -356,6 +359,25 @@ export default async function ProductDetailPage({
     goQuery
       ? `/go/${product.slug}?${goQuery}`
       : `/go/${product.slug}`;
+
+
+  function buildProviderGoHref(
+    providerSlug: string
+  ) {
+    const providerParams =
+      new URLSearchParams(
+        goParams
+      );
+
+
+    providerParams.set(
+      "provider",
+      providerSlug
+    );
+
+
+    return `/go/${productSlug}?${providerParams.toString()}`;
+  }
 
 
   const pricedOffers =
@@ -725,6 +747,9 @@ export default async function ProductDetailPage({
               href={
                 goHref
               }
+              prefetch={
+                false
+              }
               className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-8 py-4 text-[11px] font-semibold uppercase tracking-[0.14em] !text-white transition hover:opacity-90 sm:w-auto"
             >
               <span className="text-white">
@@ -999,7 +1024,12 @@ export default async function ProductDetailPage({
 
                       <Link
                         href={
-                          goHref
+                          buildProviderGoHref(
+                            offer.provider.slug
+                          )
+                        }
+                        prefetch={
+                          false
                         }
                         className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-full border border-[var(--ink)] px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] transition hover:bg-[var(--ink)] hover:text-white"
                       >
@@ -1217,3 +1247,4 @@ function TrustPoint({
     </div>
   );
 }
+

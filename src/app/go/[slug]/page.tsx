@@ -1,8 +1,20 @@
-import Link from "next/link";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import type {
+  Metadata,
+} from "next";
 
-import { prisma } from "@/lib/db/prisma";
+import Link from "next/link";
+
+import {
+  headers,
+} from "next/headers";
+
+import {
+  redirect,
+} from "next/navigation";
+
+import {
+  prisma,
+} from "@/lib/db/prisma";
 
 import {
   resolveProductDestination,
@@ -13,10 +25,43 @@ export const dynamic =
   "force-dynamic";
 
 
+export const metadata: Metadata = {
+  title:
+    "Continue to retailer",
+
+  robots: {
+    index:
+      false,
+
+    follow:
+      false,
+
+    nocache:
+      true,
+  },
+};
+
+
 function detectDeviceType(
-  userAgent: string | null
+  userAgent:
+    string |
+    null,
+
+  mobileHint:
+    string |
+    null
 ) {
-  if (!userAgent) {
+  if (
+    mobileHint ===
+    "?1"
+  ) {
+    return "mobile";
+  }
+
+
+  if (
+    !userAgent
+  ) {
     return null;
   }
 
@@ -56,8 +101,53 @@ function detectDeviceType(
 }
 
 
+function isLikelyBot(
+  userAgent:
+    string |
+    null
+) {
+  if (
+    !userAgent
+  ) {
+    return false;
+  }
+
+
+  const normalized =
+    userAgent.toLowerCase();
+
+
+  const botSignals = [
+    "bot",
+    "crawler",
+    "spider",
+    "slurp",
+    "bingpreview",
+    "facebookexternalhit",
+    "twitterbot",
+    "linkedinbot",
+    "whatsapp",
+    "telegrambot",
+    "discordbot",
+    "preview",
+  ];
+
+
+  return botSignals.some(
+    (
+      signal
+    ) =>
+      normalized.includes(
+        signal
+      )
+  );
+}
+
+
 function normalizeTrackingValue(
-  value: string | undefined
+  value:
+    string |
+    undefined
 ) {
   if (
     typeof value !==
@@ -71,7 +161,9 @@ function normalizeTrackingValue(
     value.trim();
 
 
-  if (!normalized) {
+  if (
+    !normalized
+  ) {
     return null;
   }
 
@@ -83,23 +175,70 @@ function normalizeTrackingValue(
 }
 
 
+function normalizeReferrer(
+  value:
+    string |
+    null
+) {
+  if (
+    !value
+  ) {
+    return null;
+  }
+
+
+  const normalized =
+    value.trim();
+
+
+  if (
+    !normalized
+  ) {
+    return null;
+  }
+
+
+  return normalized.slice(
+    0,
+    1000
+  );
+}
+
+
 export default async function ProductRedirectPage({
   params,
   searchParams,
 }: {
-  params: Promise<{
-    slug: string;
-  }>;
+  params:
+    Promise<{
+      slug:
+        string;
+    }>;
 
-  searchParams: Promise<{
-    article?: string;
-    campaign?: string;
-    utm_source?: string;
-    utm_medium?: string;
-    utm_campaign?: string;
-  }>;
+  searchParams:
+    Promise<{
+      article?:
+        string;
+
+      provider?:
+        string;
+
+      campaign?:
+        string;
+
+      utm_source?:
+        string;
+
+      utm_medium?:
+        string;
+
+      utm_campaign?:
+        string;
+    }>;
 }) {
-  const { slug } =
+  const {
+    slug,
+  } =
     await params;
 
 
@@ -107,13 +246,15 @@ export default async function ProductRedirectPage({
     await searchParams;
 
 
-  /*
-   * Read incoming attribution.
-   */
-
   const requestedArticleSlug =
     normalizeTrackingValue(
       query.article
+    );
+
+
+  const requestedProviderSlug =
+    normalizeTrackingValue(
+      query.provider
     );
 
 
@@ -142,18 +283,15 @@ export default async function ProductRedirectPage({
 
 
   /*
-   * Resolve product/provider destination.
+   * Resolve the product and requested retailer.
    */
 
   const result =
     await resolveProductDestination(
-      slug
+      slug,
+      requestedProviderSlug
     );
 
-
-  /*
-   * Product does not exist.
-   */
 
   if (
     !result.ok &&
@@ -165,17 +303,17 @@ export default async function ProductRedirectPage({
 
         <div className="mx-auto max-w-2xl">
 
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
             Product unavailable
           </p>
 
 
-          <h1 className="display-serif mt-3 text-5xl">
+          <h1 className="display-serif mt-4 text-5xl leading-tight sm:text-6xl">
             We couldn&apos;t find this product.
           </h1>
 
 
-          <p className="mt-5 text-sm leading-6 text-[var(--muted)]">
+          <p className="mt-5 text-base leading-8 text-[var(--muted)]">
             This product may have been removed,
             archived or is no longer available
             through Venuvella.
@@ -184,7 +322,7 @@ export default async function ProductRedirectPage({
 
           <Link
             href="/products"
-            className="mt-8 inline-flex border border-[var(--ink)] bg-[var(--ink)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white"
+            className="mt-8 inline-flex min-h-[48px] items-center rounded-full bg-[var(--ink)] px-7 py-3 text-[11px] font-semibold uppercase tracking-[0.13em] text-white"
           >
             Explore products
           </Link>
@@ -196,11 +334,6 @@ export default async function ProductRedirectPage({
   }
 
 
-  /*
-   * Product exists, but there is currently
-   * no provider mapping.
-   */
-
   if (
     !result.ok &&
     result.reason ===
@@ -211,20 +344,20 @@ export default async function ProductRedirectPage({
 
         <div className="mx-auto max-w-2xl">
 
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
-            Provider unavailable
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+            Retailer unavailable
           </p>
 
 
-          <h1 className="display-serif mt-3 text-5xl">
+          <h1 className="display-serif mt-4 text-5xl leading-tight sm:text-6xl">
             We&apos;re still connecting this product.
           </h1>
 
 
-          <p className="mt-5 text-sm leading-6 text-[var(--muted)]">
-            This product is part of the Venuvella
-            edit, but there is not currently an
-            active shopping destination available.
+          <p className="mt-5 text-base leading-8 text-[var(--muted)]">
+            The requested retailer destination is
+            not currently available for this
+            Venuvella product.
           </p>
 
 
@@ -232,7 +365,7 @@ export default async function ProductRedirectPage({
 
             <Link
               href={`/products/${slug}`}
-              className="inline-flex border border-[var(--ink)] bg-[var(--ink)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white"
+              className="inline-flex min-h-[48px] items-center rounded-full bg-[var(--ink)] px-7 py-3 text-[11px] font-semibold uppercase tracking-[0.13em] text-white"
             >
               Back to product
             </Link>
@@ -240,7 +373,7 @@ export default async function ProductRedirectPage({
 
             <Link
               href="/products"
-              className="inline-flex border border-[var(--ink)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em]"
+              className="inline-flex min-h-[48px] items-center rounded-full border border-[var(--ink)] px-7 py-3 text-[11px] font-semibold uppercase tracking-[0.13em]"
             >
               Explore products
             </Link>
@@ -254,11 +387,6 @@ export default async function ProductRedirectPage({
   }
 
 
-  /*
-   * Provider exists, but no safe destination
-   * has been configured.
-   */
-
   if (
     !result.ok &&
     result.reason ===
@@ -269,26 +397,26 @@ export default async function ProductRedirectPage({
 
         <div className="mx-auto max-w-2xl">
 
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
             Link unavailable
           </p>
 
 
-          <h1 className="display-serif mt-3 text-5xl">
+          <h1 className="display-serif mt-4 text-5xl leading-tight sm:text-6xl">
             This shopping link isn&apos;t ready yet.
           </h1>
 
 
-          <p className="mt-5 text-sm leading-6 text-[var(--muted)]">
-            A provider is connected to this product,
-            but there is currently no valid external
-            destination configured.
+          <p className="mt-5 text-base leading-8 text-[var(--muted)]">
+            The retailer is connected to this
+            product, but there is currently no
+            valid external shopping destination.
           </p>
 
 
           <Link
             href={`/products/${slug}`}
-            className="mt-8 inline-flex border border-[var(--ink)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em]"
+            className="mt-8 inline-flex min-h-[48px] items-center rounded-full border border-[var(--ink)] px-7 py-3 text-[11px] font-semibold uppercase tracking-[0.13em]"
           >
             Back to product
           </Link>
@@ -300,32 +428,27 @@ export default async function ProductRedirectPage({
   }
 
 
-  /*
-   * TypeScript guard.
-   */
-
-  if (!result.ok) {
+  if (
+    !result.ok
+  ) {
     return null;
   }
 
 
   /*
-   * Resolve optional article attribution.
-   *
-   * We do not trust the URL value as a DB ID.
-   * We resolve the public article slug against
-   * the Venuvella database.
+   * Resolve article attribution from its public slug.
    */
 
   let articleId:
-    string | null = null;
+    string |
+    null =
+      null;
 
 
   if (
     requestedArticleSlug
   ) {
     try {
-
       const sourceArticle =
         await prisma.article.findFirst({
           where: {
@@ -337,7 +460,8 @@ export default async function ProductRedirectPage({
           },
 
           select: {
-            id: true,
+            id:
+              true,
           },
         });
 
@@ -345,29 +469,26 @@ export default async function ProductRedirectPage({
       articleId =
         sourceArticle?.id ??
         null;
-
-    } catch (error) {
-
+    } catch (
+      error
+    ) {
       console.error(
         "Failed to resolve article attribution:",
         error
       );
-
     }
   }
 
-
-  /*
-   * Read request context for click analytics.
-   */
 
   const requestHeaders =
     await headers();
 
 
   const referrer =
-    requestHeaders.get(
-      "referer"
+    normalizeReferrer(
+      requestHeaders.get(
+        "referer"
+      )
     );
 
 
@@ -377,19 +498,18 @@ export default async function ProductRedirectPage({
     );
 
 
-  const deviceType =
-    detectDeviceType(
-      userAgent
+  const mobileHint =
+    requestHeaders.get(
+      "sec-ch-ua-mobile"
     );
 
 
-  /*
-   * Attribution defaults.
-   *
-   * Incoming campaign values win.
-   * Otherwise Venuvella uses internal
-   * defaults depending on click source.
-   */
+  const deviceType =
+    detectDeviceType(
+      userAgent,
+      mobileHint
+    );
+
 
   const finalUtmSource =
     incomingUtmSource ??
@@ -415,71 +535,56 @@ export default async function ProductRedirectPage({
 
 
   /*
-   * Record outbound affiliate click.
+   * Do not count obvious crawler/social-preview requests.
    *
-   * Redirect should still work if analytics
-   * logging fails, so analytics is protected
-   * by try/catch.
+   * Analytics failure must never block the retailer redirect.
    */
 
-  try {
+  if (
+    !isLikelyBot(
+      userAgent
+    )
+  ) {
+    try {
+      await prisma.affiliateClick.create({
+        data: {
+          productId:
+            result.product.id,
 
-    await prisma.affiliateClick.create({
-      data: {
+          providerId:
+            result.provider.id,
 
-        productId:
-          result.product.id,
-
-
-        providerId:
-          result.provider.id,
-
-
-        articleId:
           articleId,
 
+          category:
+            result.product.category.slug,
 
-        campaign:
           campaign,
 
+          referrer,
 
-        referrer:
-          referrer ??
-          null,
+          deviceType,
 
+          utmSource:
+            finalUtmSource,
 
-        deviceType:
-          deviceType ??
-          null,
+          utmMedium:
+            finalUtmMedium,
 
-
-        utmSource:
-          finalUtmSource,
-
-
-        utmMedium:
-          finalUtmMedium,
-
-
-        utmCampaign:
-          finalUtmCampaign,
-
-      },
-    });
-
-  } catch (error) {
-
-    console.error(
-      "Failed to record affiliate click:",
+          utmCampaign:
+            finalUtmCampaign,
+        },
+      });
+    } catch (
       error
-    );
-
+    ) {
+      console.error(
+        "Failed to record affiliate click:",
+        error
+      );
+    }
   }
 
-
-  /*
-   * Redirect to provider.
-   */
 
   redirect(
     result.destination

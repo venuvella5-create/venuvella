@@ -1,28 +1,55 @@
-import { prisma } from "@/lib/db/prisma";
+import {
+  prisma,
+} from "@/lib/db/prisma";
 
 
 export type ProductDestinationResult =
   | {
-      ok: true;
+      ok:
+        true;
 
       product: {
-        id: string;
-        slug: string;
-        name: string;
+        id:
+          string;
+
+        slug:
+          string;
+
+        name:
+          string;
+
+        category: {
+          id:
+            string;
+
+          name:
+            string;
+
+          slug:
+            string;
+        };
       };
 
       provider: {
-        id: string;
-        name: string;
-        slug: string;
+        id:
+          string;
+
+        name:
+          string;
+
+        slug:
+          string;
       };
 
-      providerProductId: string;
+      providerProductId:
+        string;
 
-      destination: string;
+      destination:
+        string;
     }
   | {
-      ok: false;
+      ok:
+        false;
 
       reason:
         | "PRODUCT_NOT_FOUND"
@@ -32,19 +59,29 @@ export type ProductDestinationResult =
 
 
 function isSafeExternalUrl(
-  value: string | null
+  value:
+    string |
+    null
 ): value is string {
-  if (!value) {
+  if (
+    !value
+  ) {
     return false;
   }
 
 
   try {
-    const url = new URL(value);
+    const url =
+      new URL(
+        value
+      );
+
 
     return (
-      url.protocol === "https:" ||
-      url.protocol === "http:"
+      url.protocol ===
+        "https:" ||
+      url.protocol ===
+        "http:"
     );
   } catch {
     return false;
@@ -53,7 +90,12 @@ function isSafeExternalUrl(
 
 
 export async function resolveProductDestination(
-  slug: string
+  slug:
+    string,
+
+  preferredProviderSlug?:
+    string |
+    null
 ): Promise<ProductDestinationResult> {
   const product =
     await prisma.product.findUnique({
@@ -62,89 +104,169 @@ export async function resolveProductDestination(
       },
 
       select: {
-        id: true,
-        slug: true,
-        name: true,
-        status: true,
+        id:
+          true,
+
+        slug:
+          true,
+
+        name:
+          true,
+
+        status:
+          true,
+
+        category: {
+          select: {
+            id:
+              true,
+
+            name:
+              true,
+
+            slug:
+              true,
+          },
+        },
 
         providerProducts: {
           where: {
             provider: {
               status: {
-                not: "INACTIVE",
+                not:
+                  "INACTIVE",
               },
             },
           },
 
           select: {
-            id: true,
+            id:
+              true,
 
-            affiliateUrl: true,
-            productUrl: true,
+            affiliateUrl:
+              true,
 
-            availability: true,
-            syncStatus: true,
-            updatedAt: true,
+            productUrl:
+              true,
+
+            availability:
+              true,
+
+            syncStatus:
+              true,
+
+            updatedAt:
+              true,
+
+            priority:
+              true,
 
             provider: {
               select: {
-                id: true,
-                name: true,
-                slug: true,
-                status: true,
+                id:
+                  true,
+
+                name:
+                  true,
+
+                slug:
+                  true,
+
+                status:
+                  true,
               },
             },
           },
 
-          orderBy: {
-            updatedAt: "desc",
-          },
+          orderBy: [
+            {
+              priority:
+                "asc",
+            },
+
+            {
+              updatedAt:
+                "desc",
+            },
+          ],
         },
       },
     });
 
 
-  /*
-   * Product unavailable
-   */
-
   if (
     !product ||
-    product.status !== "PUBLISHED"
+    product.status !==
+      "PUBLISHED"
   ) {
     return {
-      ok: false,
-      reason: "PRODUCT_NOT_FOUND",
+      ok:
+        false,
+
+      reason:
+        "PRODUCT_NOT_FOUND",
     };
   }
 
-
-  /*
-   * No provider mappings
-   */
 
   if (
-    product.providerProducts.length === 0
+    product.providerProducts.length ===
+    0
   ) {
     return {
-      ok: false,
-      reason: "NO_PROVIDER",
+      ok:
+        false,
+
+      reason:
+        "NO_PROVIDER",
+    };
+  }
+
+
+  const requestedProvider =
+    preferredProviderSlug
+      ?.trim()
+      .toLowerCase() ??
+    null;
+
+
+  const candidateOffers =
+    requestedProvider
+      ? product.providerProducts.filter(
+          (
+            offer
+          ) =>
+            offer.provider.slug.toLowerCase() ===
+            requestedProvider
+        )
+      : product.providerProducts;
+
+
+  if (
+    candidateOffers.length ===
+    0
+  ) {
+    return {
+      ok:
+        false,
+
+      reason:
+        "NO_PROVIDER",
     };
   }
 
 
   /*
-   * Prefer affiliate URL
+   * Prefer affiliate URLs.
    */
 
-  for (const offer of product.providerProducts) {
-    const destination =
-      offer.affiliateUrl;
-
-
+  for (
+    const offer of
+    candidateOffers
+  ) {
     if (
       !isSafeExternalUrl(
-        destination
+        offer.affiliateUrl
       )
     ) {
       continue;
@@ -152,12 +274,21 @@ export async function resolveProductDestination(
 
 
     return {
-      ok: true,
+      ok:
+        true,
 
       product: {
-        id: product.id,
-        slug: product.slug,
-        name: product.name,
+        id:
+          product.id,
+
+        slug:
+          product.slug,
+
+        name:
+          product.name,
+
+        category:
+          product.category,
       },
 
       provider: {
@@ -174,23 +305,23 @@ export async function resolveProductDestination(
       providerProductId:
         offer.id,
 
-      destination,
+      destination:
+        offer.affiliateUrl,
     };
   }
 
 
   /*
-   * Fall back to normal provider product URL
+   * Fall back to the normal retailer URL.
    */
 
-  for (const offer of product.providerProducts) {
-    const destination =
-      offer.productUrl;
-
-
+  for (
+    const offer of
+    candidateOffers
+  ) {
     if (
       !isSafeExternalUrl(
-        destination
+        offer.productUrl
       )
     ) {
       continue;
@@ -198,12 +329,21 @@ export async function resolveProductDestination(
 
 
     return {
-      ok: true,
+      ok:
+        true,
 
       product: {
-        id: product.id,
-        slug: product.slug,
-        name: product.name,
+        id:
+          product.id,
+
+        slug:
+          product.slug,
+
+        name:
+          product.name,
+
+        category:
+          product.category,
       },
 
       provider: {
@@ -220,17 +360,17 @@ export async function resolveProductDestination(
       providerProductId:
         offer.id,
 
-      destination,
+      destination:
+        offer.productUrl,
     };
   }
 
-
-  /*
-   * Provider exists, but no valid destination
-   */
 
   return {
-    ok: false,
-    reason: "NO_VALID_DESTINATION",
+    ok:
+      false,
+
+    reason:
+      "NO_VALID_DESTINATION",
   };
 }

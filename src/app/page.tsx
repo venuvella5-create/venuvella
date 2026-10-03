@@ -6,6 +6,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ArticleCard } from "@/components/editorial/ArticleCard";
 import { CategoryCard } from "@/components/editorial/CategoryCard";
 import { ProductCard } from "@/components/editorial/ProductCard";
+import { NewsletterForm } from "@/components/newsletter/NewsletterForm";
 
 import { getPublishedArticles } from "@/lib/content/articles";
 import { getPublishedProducts } from "@/lib/content/products";
@@ -471,27 +472,11 @@ export default async function HomePage() {
               your inbox.
             </p>
 
-            <form className="mx-auto mt-7 flex max-w-md flex-col gap-2 sm:flex-row">
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
-
-              <input
-                id="email"
-                type="email"
-                name="email"
-                autoComplete="email"
-                placeholder="Your email address"
-                className="min-w-0 flex-1 rounded-full bg-white px-5 py-3 text-sm text-[var(--ink)] outline-none"
+            <div className="mx-auto mt-7 max-w-md">
+              <NewsletterForm
+                theme="dark"
               />
-
-              <button
-                type="submit"
-                className="rounded-full bg-[#d8c8ba] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink)]"
-              >
-                Get the Edit
-              </button>
-            </form>
+            </div>
 
             <p className="mt-3 text-[10px] text-white/40">
               No noise. Just thoughtful finds and ideas.
