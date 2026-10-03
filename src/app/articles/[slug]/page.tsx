@@ -1,114 +1,354 @@
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Clock3,
+  ShoppingBag,
+} from "lucide-react";
 
-import { getArticleBySlug } from "@/lib/content/articles";
-import { prisma } from "@/lib/db/prisma";
-import { ProductCard } from "@/components/editorial/ProductCard";
+import {
+  ProductCard,
+} from "@/components/editorial/ProductCard";
+
+import {
+  getArticleBySlug,
+} from "@/lib/content/articles";
+
+import {
+  prisma,
+} from "@/lib/db/prisma";
 
 
-export const dynamic = "force-dynamic";
+export const dynamic =
+  "force-dynamic";
 
 
-function getBlockText(data: unknown) {
+function getBlockText(
+  data: unknown
+) {
   if (
-    typeof data === "object" &&
-    data !== null &&
-    !Array.isArray(data) &&
-    "text" in data
+    typeof data ===
+      "object" &&
+    data !==
+      null &&
+    !Array.isArray(
+      data
+    ) &&
+    "text" in
+      data
   ) {
     const value =
-      (data as Record<string, unknown>).text;
+      (
+        data as Record<
+          string,
+          unknown
+        >
+      ).text;
 
-    if (typeof value === "string") {
+
+    if (
+      typeof value ===
+      "string"
+    ) {
       return value;
     }
 
+
     if (
-      value !== null &&
-      value !== undefined
+      value !==
+        null &&
+      value !==
+        undefined
     ) {
-      return String(value);
+      return String(
+        value
+      );
     }
   }
+
 
   return "";
 }
 
 
-function getProductId(data: unknown) {
+function getProductId(
+  data: unknown
+) {
   if (
-    typeof data === "object" &&
-    data !== null &&
-    !Array.isArray(data) &&
-    "productId" in data
+    typeof data ===
+      "object" &&
+    data !==
+      null &&
+    !Array.isArray(
+      data
+    ) &&
+    "productId" in
+      data
   ) {
     const value =
-      (data as Record<string, unknown>)
-        .productId;
+      (
+        data as Record<
+          string,
+          unknown
+        >
+      ).productId;
 
-    if (typeof value === "string") {
+
+    if (
+      typeof value ===
+      "string"
+    ) {
       return value;
     }
   }
+
 
   return null;
 }
 
 
-function getProductIds(data: unknown) {
+function getProductIds(
+  data: unknown
+) {
   if (
-    typeof data === "object" &&
-    data !== null &&
-    !Array.isArray(data) &&
-    "productIds" in data
+    typeof data ===
+      "object" &&
+    data !==
+      null &&
+    !Array.isArray(
+      data
+    ) &&
+    "productIds" in
+      data
   ) {
     const value =
-      (data as Record<string, unknown>)
-        .productIds;
+      (
+        data as Record<
+          string,
+          unknown
+        >
+      ).productIds;
 
-    if (Array.isArray(value)) {
+
+    if (
+      Array.isArray(
+        value
+      )
+    ) {
       return value.filter(
         (
           productId
         ): productId is string =>
           typeof productId ===
             "string" &&
-          productId.length > 0
+          productId.length >
+            0
       );
     }
   }
 
+
   return [];
+}
+
+
+function createHeadingId(
+  text: string,
+  index: number
+) {
+  const slug =
+    text
+      .toLowerCase()
+      .trim()
+      .replace(
+        /[^a-z0-9]+/g,
+        "-"
+      )
+      .replace(
+        /^-+|-+$/g,
+        ""
+      );
+
+
+  return slug
+    ? `${slug}-${index + 1}`
+    : `section-${index + 1}`;
+}
+
+
+function estimateReadingTime(
+  blocks: Array<{
+    type: string;
+    data: unknown;
+  }>,
+  title: string,
+  subtitle:
+    | string
+    | null
+) {
+  const text =
+    [
+      title,
+      subtitle ??
+        "",
+      ...blocks.map(
+        (block) =>
+          getBlockText(
+            block.data
+          )
+      ),
+    ]
+      .join(
+        " "
+      )
+      .trim();
+
+
+  const words =
+    text
+      ? text.split(
+          /\s+/
+        ).length
+      : 0;
+
+
+  return Math.max(
+    1,
+    Math.ceil(
+      words /
+        220
+    )
+  );
+}
+
+
+function formatPublishedDate(
+  value: Date
+) {
+  return new Intl.DateTimeFormat(
+    "en-US",
+    {
+      month:
+        "long",
+
+      day:
+        "numeric",
+
+      year:
+        "numeric",
+    }
+  ).format(
+    value
+  );
 }
 
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{
-    slug: string;
-  }>;
-}) {
-  const { slug } = await params;
+  params:
+    Promise<{
+      slug: string;
+    }>;
+}): Promise<Metadata> {
+  const {
+    slug,
+  } = await params;
+
 
   const article =
-    await getArticleBySlug(slug);
+    await getArticleBySlug(
+      slug
+    );
 
 
-  if (!article) {
+  if (
+    !article
+  ) {
     return {};
   }
 
 
-  return {
-    title:
-      article.seo?.title ??
-      article.title,
+  const title =
+    article.seo?.title ??
+    article.title;
 
-    description:
-      article.seo?.description ??
-      article.excerpt ??
-      undefined,
+
+  const description =
+    article.seo?.description ??
+    article.excerpt ??
+    article.subtitle ??
+    undefined;
+
+
+  const canonical =
+    `/articles/${article.slug}`;
+
+
+  const socialImage =
+    article.featuredImage ??
+    "/og-default.jpg";
+
+
+  return {
+    title,
+
+    description,
+
+    alternates: {
+      canonical,
+    },
+
+    openGraph: {
+      type:
+        "article",
+
+      url:
+        canonical,
+
+      title,
+
+      description,
+
+      siteName:
+        "Venuvella",
+
+      publishedTime:
+        article.publishedAt?.toISOString(),
+
+      authors: [
+        article.author.name,
+      ],
+
+      section:
+        article.category.name,
+
+      images: [
+        {
+          url:
+            socialImage,
+
+          alt:
+            article.title,
+        },
+      ],
+    },
+
+    twitter: {
+      card:
+        "summary_large_image",
+
+      title,
+
+      description,
+
+      images: [
+        socialImage,
+      ],
+    },
   };
 }
 
@@ -116,25 +356,28 @@ export async function generateMetadata({
 export default async function ArticlePage({
   params,
 }: {
-  params: Promise<{
-    slug: string;
-  }>;
+  params:
+    Promise<{
+      slug: string;
+    }>;
 }) {
-  const { slug } = await params;
+  const {
+    slug,
+  } = await params;
+
 
   const article =
-    await getArticleBySlug(slug);
+    await getArticleBySlug(
+      slug
+    );
 
 
-  if (!article) {
+  if (
+    !article
+  ) {
     notFound();
   }
 
-
-  /*
-   * Collect all product IDs used by
-   * PRODUCT and PRODUCT_GRID blocks.
-   */
 
   const productIdSet =
     new Set<string>();
@@ -142,14 +385,19 @@ export default async function ArticlePage({
 
   article.blocks.forEach(
     (block) => {
-
       if (
-        block.type === "PRODUCT"
+        block.type ===
+        "PRODUCT"
       ) {
         const productId =
-          getProductId(block.data);
+          getProductId(
+            block.data
+          );
 
-        if (productId) {
+
+        if (
+          productId
+        ) {
           productIdSet.add(
             productId
           );
@@ -166,30 +414,30 @@ export default async function ArticlePage({
             block.data
           );
 
+
         productIds.forEach(
-          (productId) => {
+          (
+            productId
+          ) => {
             productIdSet.add(
               productId
             );
           }
         );
       }
-
     }
   );
 
 
   const productIds =
-    Array.from(productIdSet);
+    Array.from(
+      productIdSet
+    );
 
-
-  /*
-   * Fetch current product information
-   * from the central product database.
-   */
 
   const products =
-    productIds.length > 0
+    productIds.length >
+    0
       ? await prisma.product.findMany({
           where: {
             id: {
@@ -201,9 +449,11 @@ export default async function ArticlePage({
           },
 
           include: {
-            brand: true,
+            brand:
+              true,
 
-            category: true,
+            category:
+              true,
 
             images: {
               orderBy: {
@@ -216,14 +466,12 @@ export default async function ArticlePage({
       : [];
 
 
-  /*
-   * Fast lookup by product ID.
-   */
-
   const productMap =
     new Map(
       products.map(
-        (product) => [
+        (
+          product
+        ) => [
           product.id,
           product,
         ]
@@ -231,250 +479,459 @@ export default async function ArticlePage({
     );
 
 
+  const readingMinutes =
+    estimateReadingTime(
+      article.blocks,
+      article.title,
+      article.subtitle
+    );
+
+
+  const headingItems =
+    article.blocks
+      .map(
+        (
+          block,
+          index
+        ) => ({
+          id:
+            block.id,
+
+          index,
+
+          type:
+            block.type,
+
+          text:
+            getBlockText(
+              block.data
+            ),
+        })
+      )
+      .filter(
+        (
+          block
+        ) =>
+          block.type ===
+            "HEADING" &&
+          block.text.trim()
+            .length >
+            0
+      )
+      .map(
+        (
+          block
+        ) => ({
+          ...block,
+
+          anchor:
+            createHeadingId(
+              block.text,
+              block.index
+            ),
+        })
+      );
+
+
+  const headingAnchorMap =
+    new Map(
+      headingItems.map(
+        (
+          item
+        ) => [
+          item.id,
+          item.anchor,
+        ]
+      )
+    );
+
+
+  const hasProducts =
+    productIds.length >
+    0;
+
+
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    "https://venuvella.vercel.app";
+
+
+  const articleUrl =
+    new URL(
+      `/articles/${article.slug}`,
+      siteUrl
+    ).toString();
+
+
+  const articleStructuredData = {
+    "@context":
+      "https://schema.org",
+
+    "@type":
+      "Article",
+
+    headline:
+      article.title,
+
+    description:
+      article.seo?.description ??
+      article.excerpt ??
+      article.subtitle ??
+      undefined,
+
+    image:
+      article.featuredImage
+        ? [
+            article.featuredImage,
+          ]
+        : undefined,
+
+    datePublished:
+      article.publishedAt?.toISOString(),
+
+    author: {
+      "@type":
+        "Person",
+
+      name:
+        article.author.name,
+    },
+
+    publisher: {
+      "@type":
+        "Organization",
+
+      name:
+        "Venuvella",
+
+      url:
+        siteUrl,
+    },
+
+    articleSection:
+      article.category.name,
+
+    mainEntityOfPage: {
+      "@type":
+        "WebPage",
+
+      "@id":
+        articleUrl,
+    },
+
+    url:
+      articleUrl,
+  };
+
+
   return (
-    <main className="container-shell py-12 sm:py-20">
+    <main className="pb-20 sm:pb-28">
 
-      <article className="mx-auto max-w-4xl">
-
-        {/* Article header */}
-
-        <div className="max-w-3xl">
-
-          <p className="admin-eyebrow">
-            {article.category.name}
-          </p>
-
-
-          <h1 className="display-serif mt-3 text-5xl leading-[.98] tracking-[-.035em] sm:text-7xl">
-            {article.title}
-          </h1>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html:
+            JSON.stringify(
+              articleStructuredData
+            ).replace(
+              /</g,
+              "\\u003c"
+            ),
+        }}
+      />
 
 
-          {article.subtitle && (
-            <p className="mt-6 text-lg leading-7 text-[var(--muted)]">
-              {article.subtitle}
-            </p>
-          )}
+      <article>
+
+        {/* Article masthead */}
+
+        <header className="border-b border-[var(--line)]">
+
+          <div className="container-shell py-10 sm:py-14 lg:py-16">
+
+            <Link
+              href={`/${article.category.slug}`}
+              className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)] transition hover:text-[var(--ink)]"
+            >
+              <ArrowLeft
+                size={
+                  14
+                }
+              />
+
+              {article.category.name}
+            </Link>
 
 
-          <div className="mt-6 text-[10px] font-semibold uppercase tracking-[.14em] text-[var(--muted)]">
+            <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
 
-            By {article.author.name}
+              <div className="max-w-5xl">
 
-            {article.publishedAt && (
-              <>
-                {" · "}
-                {article.publishedAt.toLocaleDateString()}
-              </>
-            )}
+                <p className="text-[11px] font-semibold uppercase tracking-[0.19em] text-[var(--accent)] sm:text-xs">
+                  {article.category.name}
+                </p>
+
+
+                <h1 className="display-serif mt-4 text-5xl leading-[0.95] tracking-[-0.045em] sm:text-6xl lg:text-[76px] xl:text-[88px]">
+                  {article.title}
+                </h1>
+
+
+                {article.subtitle && (
+                  <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
+                    {article.subtitle}
+                  </p>
+                )}
+
+
+                {!article.subtitle &&
+                  article.excerpt && (
+                    <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
+                      {article.excerpt}
+                    </p>
+                  )}
+
+              </div>
+
+
+              <div className="border-t border-[var(--line)] pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+
+                <p className="text-xs leading-6 text-[var(--muted)]">
+                  By{" "}
+                  <span className="font-semibold text-[var(--ink)]">
+                    {article.author.name}
+                  </span>
+                </p>
+
+
+                {article.publishedAt && (
+                  <p className="mt-2 text-xs leading-6 text-[var(--muted)]">
+                    Published{" "}
+                    {formatPublishedDate(
+                      article.publishedAt
+                    )}
+                  </p>
+                )}
+
+
+                <div className="mt-3 flex items-center gap-2 text-xs text-[var(--muted)]">
+
+                  <Clock3
+                    size={
+                      14
+                    }
+                  />
+
+                  <span>
+                    {readingMinutes} min read
+                  </span>
+
+                </div>
+
+
+                {hasProducts && (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-[var(--muted)]">
+
+                    <ShoppingBag
+                      size={
+                        14
+                      }
+                    />
+
+                    <span>
+                      Product recommendations included
+                    </span>
+
+                  </div>
+                )}
+
+              </div>
+
+            </div>
 
           </div>
 
-        </div>
+        </header>
 
 
         {/* Featured image */}
 
         {article.featuredImage && (
-          <div className="relative mt-10 aspect-[16/9] overflow-hidden">
+          <div className="container-shell pt-8 sm:pt-10">
 
-            <Image
-              src={
-                article.featuredImage
-              }
-              alt={
-                article.title
-              }
-              fill
-              priority
-              sizes="(max-width: 1024px) 100vw, 960px"
-              className="object-cover"
-            />
+            <div className="relative aspect-[16/9] overflow-hidden bg-[var(--warm)]">
+
+              <Image
+                src={
+                  article.featuredImage
+                }
+                alt={
+                  article.title
+                }
+                fill
+                priority
+                sizes="(max-width: 1280px) 100vw, 1180px"
+                className="object-cover"
+              />
+
+            </div>
 
           </div>
         )}
 
 
-        {/* Article body */}
+        {/* Reading layout */}
 
-        <div className="prose-venuvella mx-auto mt-10 max-w-3xl">
+        <div className="container-shell mt-10 grid gap-12 lg:mt-14 lg:grid-cols-[220px_minmax(0,760px)_1fr] lg:items-start">
 
-          {article.blocks.map(
-            (block) => {
+          {/* Reading rail */}
 
-              /*
-               * SINGLE PRODUCT
-               */
+          <aside className="hidden lg:block">
 
-              if (
-                block.type ===
-                "PRODUCT"
-              ) {
-                const productId =
-                  getProductId(
-                    block.data
-                  );
+            <div className="sticky top-28">
+
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+                In this story
+              </p>
 
 
-                if (!productId) {
-                  return null;
-                }
+              {headingItems.length >
+              0 ? (
+                <nav
+                  aria-label="Article sections"
+                  className="mt-5 space-y-3 border-l border-[var(--line)] pl-4"
+                >
 
+                  {headingItems.map(
+                    (
+                      item
+                    ) => (
 
-                const product =
-                  productMap.get(
-                    productId
-                  );
+                      <a
+                        key={
+                          item.id
+                        }
+                        href={`#${item.anchor}`}
+                        className="block text-xs leading-5 text-[var(--muted)] transition hover:text-[var(--ink)]"
+                      >
+                        {item.text}
+                      </a>
 
-
-                if (!product) {
-                  return (
-                    <aside
-                      key={
-                        block.id
-                      }
-                      className="not-prose my-10 border border-[var(--line)] bg-[#efeee9] p-5"
-                    >
-                      <p className="text-sm text-[var(--muted)]">
-                        This product is currently unavailable.
-                      </p>
-                    </aside>
-                  );
-                }
-
-
-                return (
-                  <div
-                    key={
-                      block.id
-                    }
-                    className="not-prose my-12"
-                  >
-                    <ProductCard
-                      brand={
-                        product
-                          .brand
-                          ?.name ??
-                        "Venuvella"
-                      }
-                      name={
-                        product.name
-                      }
-                      summary={
-                        product.editorialSummary ??
-                        ""
-                      }
-                      image={
-                        product
-                          .images[0]
-                          ?.url ??
-                        "/placeholder.png"
-                      }
-                      slug={`${product.slug}?article=${encodeURIComponent(
-  article.slug
-)}`}
-                    />
-                  </div>
-                );
-              }
-
-
-              /*
-               * PRODUCT GRID
-               */
-
-              if (
-                block.type ===
-                "PRODUCT_GRID"
-              ) {
-                const gridIds =
-                  getProductIds(
-                    block.data
-                  );
-
-
-                const gridProducts =
-                  gridIds
-                    .map(
-                      (
-                        productId
-                      ) =>
-                        productMap.get(
-                          productId
-                        )
                     )
-                    .filter(
-                      (
-                        product
-                      ): product is NonNullable<
-                        typeof product
-                      > =>
-                        Boolean(
-                          product
-                        )
-                    );
+                  )}
+
+                </nav>
+              ) : (
+                <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
+                  A concise Venuvella edit.
+                </p>
+              )}
 
 
-                if (
-                  gridProducts.length ===
-                  0
-                ) {
-                  return (
-                    <aside
-                      key={
-                        block.id
-                      }
-                      className="not-prose my-10 border border-[var(--line)] bg-[#efeee9] p-5"
-                    >
-                      <p className="text-sm text-[var(--muted)]">
-                        These products are currently unavailable.
-                      </p>
-                    </aside>
-                  );
-                }
+              <div className="mt-8 border-t border-[var(--line)] pt-5">
+
+                <p className="text-xs leading-6 text-[var(--muted)]">
+                  Thoughtful editorial guidance,
+                  selected for usefulness and context.
+                </p>
+
+              </div>
+
+            </div>
+
+          </aside>
 
 
-                return (
-                  <section
-                    key={
-                      block.id
+          {/* Article body */}
+
+          <div className="min-w-0">
+
+            {article.excerpt &&
+              article.subtitle && (
+                <p className="mb-10 border-l-2 border-[var(--accent)] pl-5 text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
+                  {article.excerpt}
+                </p>
+              )}
+
+
+            <div>
+
+              {article.blocks.map(
+                (
+                  block,
+                  blockIndex
+                ) => {
+
+                  if (
+                    block.type ===
+                    "PRODUCT"
+                  ) {
+                    const productId =
+                      getProductId(
+                        block.data
+                      );
+
+
+                    if (
+                      !productId
+                    ) {
+                      return null;
                     }
-                    className="not-prose my-14"
-                  >
-
-                    <div className="mb-7 border-b border-[var(--line)] pb-4">
-
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-                        Venuvella picks
-                      </p>
-
-                      <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                        Products from this story
-                      </h2>
-
-                    </div>
 
 
-                    <div
-                      className="
-                        grid
-                        grid-cols-1
-                        gap-x-6
-                        gap-y-10
-                        sm:grid-cols-2
-                        lg:grid-cols-3
-                      "
-                    >
+                    const product =
+                      productMap.get(
+                        productId
+                      );
 
-                      {gridProducts.map(
-                        (product) => (
+
+                    if (
+                      !product
+                    ) {
+                      return (
+                        <aside
+                          key={
+                            block.id
+                          }
+                          className="my-10 rounded-2xl border border-[var(--line)] bg-[#efeee9] p-5"
+                        >
+
+                          <p className="text-sm leading-6 text-[var(--muted)]">
+                            This product is currently unavailable.
+                          </p>
+
+                        </aside>
+                      );
+                    }
+
+
+                    return (
+                      <section
+                        key={
+                          block.id
+                        }
+                        className="my-14 border-y border-[var(--line)] py-8"
+                      >
+
+                        <div className="mb-6">
+
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+                            Venuvella pick
+                          </p>
+
+
+                          <h2 className="display-serif mt-2 text-3xl leading-tight">
+                            From this story
+                          </h2>
+
+                        </div>
+
+
+                        <div className="max-w-sm">
+
                           <ProductCard
-                            key={
-                              product.id
-                            }
                             brand={
-                              product
-                                .brand
+                              product.brand
                                 ?.name ??
                               "Venuvella"
                             }
@@ -486,206 +943,380 @@ export default async function ArticlePage({
                               ""
                             }
                             image={
-                              product
-                                .images[0]
+                              product.images[0]
                                 ?.url ??
                               "/placeholder.png"
                             }
                             slug={`${product.slug}?article=${encodeURIComponent(
-  article.slug
-)}`}
+                              article.slug
+                            )}`}
                           />
-                        )
-                      )}
 
-                    </div>
+                        </div>
 
-                  </section>
-                );
-              }
-
-
-              /*
-               * STANDARD TEXT BLOCKS
-               */
-
-              const text =
-                getBlockText(
-                  block.data
-                );
-
-
-              /*
-               * HEADING
-               */
-
-              if (
-                block.type ===
-                "HEADING"
-              ) {
-                return (
-                  <h2
-                    key={
-                      block.id
-                    }
-                  >
-                    {text}
-                  </h2>
-                );
-              }
-
-
-              /*
-               * QUOTE
-               */
-
-              if (
-                block.type ===
-                "QUOTE"
-              ) {
-                return (
-                  <blockquote
-                    key={
-                      block.id
-                    }
-                  >
-                    {text}
-                  </blockquote>
-                );
-              }
-
-
-              /*
-               * BULLET LIST
-               */
-
-              if (
-                block.type ===
-                "BULLET_LIST"
-              ) {
-                const items =
-                  text
-                    .split("\n")
-                    .map(
-                      (item) =>
-                        item.trim()
-                    )
-                    .filter(
-                      Boolean
+                      </section>
                     );
-
-
-                return (
-                  <ul
-                    key={
-                      block.id
-                    }
-                  >
-                    {items.map(
-                      (
-                        item,
-                        index
-                      ) => (
-                        <li
-                          key={
-                            index
-                          }
-                        >
-                          {item}
-                        </li>
-                      )
-                    )}
-                  </ul>
-                );
-              }
-
-
-              /*
-               * NUMBERED LIST
-               */
-
-              if (
-                block.type ===
-                "NUMBERED_LIST"
-              ) {
-                const items =
-                  text
-                    .split("\n")
-                    .map(
-                      (item) =>
-                        item.trim()
-                    )
-                    .filter(
-                      Boolean
-                    );
-
-
-                return (
-                  <ol
-                    key={
-                      block.id
-                    }
-                  >
-                    {items.map(
-                      (
-                        item,
-                        index
-                      ) => (
-                        <li
-                          key={
-                            index
-                          }
-                        >
-                          {item}
-                        </li>
-                      )
-                    )}
-                  </ol>
-                );
-              }
-
-
-              /*
-               * AFFILIATE DISCLOSURE
-               */
-
-              if (
-                block.type ===
-                "AFFILIATE_DISCLOSURE"
-              ) {
-                return (
-                  <aside
-                    key={
-                      block.id
-                    }
-                    className="not-prose my-8 border border-[var(--line)] bg-[#efeee9] p-4 text-xs leading-5 text-[var(--muted)]"
-                  >
-                    {text}
-                  </aside>
-                );
-              }
-
-
-              /*
-               * SAFE FALLBACK
-               */
-
-              if (!text) {
-                return null;
-              }
-
-
-              return (
-                <p
-                  key={
-                    block.id
                   }
+
+
+                  if (
+                    block.type ===
+                    "PRODUCT_GRID"
+                  ) {
+                    const gridIds =
+                      getProductIds(
+                        block.data
+                      );
+
+
+                    const gridProducts =
+                      gridIds
+                        .map(
+                          (
+                            productId
+                          ) =>
+                            productMap.get(
+                              productId
+                            )
+                        )
+                        .filter(
+                          (
+                            product
+                          ): product is NonNullable<
+                            typeof product
+                          > =>
+                            Boolean(
+                              product
+                            )
+                        );
+
+
+                    if (
+                      gridProducts.length ===
+                      0
+                    ) {
+                      return (
+                        <aside
+                          key={
+                            block.id
+                          }
+                          className="my-10 rounded-2xl border border-[var(--line)] bg-[#efeee9] p-5"
+                        >
+
+                          <p className="text-sm leading-6 text-[var(--muted)]">
+                            These products are currently unavailable.
+                          </p>
+
+                        </aside>
+                      );
+                    }
+
+
+                    return (
+                      <section
+                        key={
+                          block.id
+                        }
+                        className="my-16 border-y border-[var(--line)] py-9"
+                      >
+
+                        <div className="mb-8">
+
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+                            Venuvella picks
+                          </p>
+
+
+                          <h2 className="display-serif mt-2 text-3xl leading-tight sm:text-4xl">
+                            Products from this story
+                          </h2>
+
+
+                          <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
+                            A short list of products connected to the ideas in this article.
+                          </p>
+
+                        </div>
+
+
+                        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2">
+
+                          {gridProducts.map(
+                            (
+                              product
+                            ) => (
+
+                              <ProductCard
+                                key={
+                                  product.id
+                                }
+                                brand={
+                                  product.brand
+                                    ?.name ??
+                                  "Venuvella"
+                                }
+                                name={
+                                  product.name
+                                }
+                                summary={
+                                  product.editorialSummary ??
+                                  ""
+                                }
+                                image={
+                                  product.images[0]
+                                    ?.url ??
+                                  "/placeholder.png"
+                                }
+                                slug={`${product.slug}?article=${encodeURIComponent(
+                                  article.slug
+                                )}`}
+                              />
+
+                            )
+                          )}
+
+                        </div>
+
+                      </section>
+                    );
+                  }
+
+
+                  const text =
+                    getBlockText(
+                      block.data
+                    );
+
+
+                  if (
+                    block.type ===
+                    "HEADING"
+                  ) {
+                    return (
+                      <h2
+                        key={
+                          block.id
+                        }
+                        id={
+                          headingAnchorMap.get(
+                            block.id
+                          ) ??
+                          createHeadingId(
+                            text,
+                            blockIndex
+                          )
+                        }
+                        className="display-serif scroll-mt-28 pb-1 pt-8 text-3xl leading-[1.08] tracking-[-0.02em] sm:text-4xl"
+                      >
+                        {text}
+                      </h2>
+                    );
+                  }
+
+
+                  if (
+                    block.type ===
+                    "QUOTE"
+                  ) {
+                    return (
+                      <blockquote
+                        key={
+                          block.id
+                        }
+                        className="display-serif my-10 border-l-2 border-[var(--accent)] pl-6 text-2xl leading-[1.25] tracking-[-0.015em] text-[var(--ink)] sm:text-3xl"
+                      >
+                        {text}
+                      </blockquote>
+                    );
+                  }
+
+
+                  if (
+                    block.type ===
+                    "BULLET_LIST"
+                  ) {
+                    const items =
+                      text
+                        .split(
+                          "\n"
+                        )
+                        .map(
+                          (
+                            item
+                          ) =>
+                            item.trim()
+                        )
+                        .filter(
+                          Boolean
+                        );
+
+
+                    return (
+                      <ul
+                        key={
+                          block.id
+                        }
+                        className="my-7 list-disc space-y-3 pl-6 text-[17px] leading-8 text-[var(--ink)] sm:text-lg"
+                      >
+
+                        {items.map(
+                          (
+                            item,
+                            index
+                          ) => (
+
+                            <li
+                              key={
+                                index
+                              }
+                            >
+                              {item}
+                            </li>
+
+                          )
+                        )}
+
+                      </ul>
+                    );
+                  }
+
+
+                  if (
+                    block.type ===
+                    "NUMBERED_LIST"
+                  ) {
+                    const items =
+                      text
+                        .split(
+                          "\n"
+                        )
+                        .map(
+                          (
+                            item
+                          ) =>
+                            item.trim()
+                        )
+                        .filter(
+                          Boolean
+                        );
+
+
+                    return (
+                      <ol
+                        key={
+                          block.id
+                        }
+                        className="my-7 list-decimal space-y-3 pl-6 text-[17px] leading-8 text-[var(--ink)] sm:text-lg"
+                      >
+
+                        {items.map(
+                          (
+                            item,
+                            index
+                          ) => (
+
+                            <li
+                              key={
+                                index
+                              }
+                            >
+                              {item}
+                            </li>
+
+                          )
+                        )}
+
+                      </ol>
+                    );
+                  }
+
+
+                  if (
+                    block.type ===
+                    "AFFILIATE_DISCLOSURE"
+                  ) {
+                    return (
+                      <aside
+                        key={
+                          block.id
+                        }
+                        className="my-9 rounded-2xl border border-[var(--line)] bg-[#efeee9] p-5 text-sm leading-6 text-[var(--muted)]"
+                      >
+                        {text}
+                      </aside>
+                    );
+                  }
+
+
+                  if (
+                    !text
+                  ) {
+                    return null;
+                  }
+
+
+                  return (
+                    <p
+                      key={
+                        block.id
+                      }
+                      className="my-6 text-[17px] leading-8 text-[var(--ink)] sm:text-[19px] sm:leading-9"
+                    >
+                      {text}
+                    </p>
+                  );
+                }
+              )}
+
+            </div>
+
+
+            {/* End matter */}
+
+            <footer className="mt-16 border-t border-[var(--line)] pt-8">
+
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+                Continue exploring
+              </p>
+
+
+              <div className="mt-5 flex flex-wrap gap-3">
+
+                <Link
+                  href={`/${article.category.slug}`}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[var(--ink)] px-6 py-3 text-[10px] font-semibold uppercase tracking-[0.13em] transition hover:bg-[var(--ink)] hover:text-white"
                 >
-                  {text}
-                </p>
-              );
-            }
-          )}
+                  More in {article.category.name}
+
+                  <ArrowRight
+                    size={
+                      13
+                    }
+                  />
+                </Link>
+
+
+                <Link
+                  href="/articles"
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[var(--ink)] px-6 py-3 text-[10px] font-semibold uppercase tracking-[0.13em] text-white"
+                >
+                  All articles
+
+                  <ArrowRight
+                    size={
+                      13
+                    }
+                  />
+                </Link>
+
+              </div>
+
+            </footer>
+
+          </div>
+
+
+          <div className="hidden lg:block" />
 
         </div>
 
