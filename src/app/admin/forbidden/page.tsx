@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import {
-  requireAdminSession,
+  requirePageRole,
 } from "@/lib/auth/require-admin";
 
 
@@ -11,7 +11,12 @@ export const dynamic =
 
 export default async function ForbiddenPage() {
   const session =
-    await requireAdminSession();
+    await requirePageRole([
+      "ADMIN",
+      "EDITOR",
+      "AUTHOR",
+      "ANALYST",
+    ]);
 
 
   return (
