@@ -1,6 +1,7 @@
 const COOKIE_NAME =
   "venuvella_admin_session";
 
+
 const SESSION_DURATION_SECONDS =
   60 * 60 * 12;
 
@@ -16,6 +17,7 @@ export type AdminSessionPayload = {
   userId: string;
   email: string;
   role: AdminSessionRole;
+  sessionVersion: number;
   exp: number;
 };
 
@@ -24,6 +26,7 @@ type AdminSessionInput = {
   userId: string;
   email: string;
   role: AdminSessionRole;
+  sessionVersion: number;
 };
 
 
@@ -53,10 +56,14 @@ function bytesToBase64Url(
 ) {
   let binary = "";
 
+
   for (const byte of bytes) {
     binary +=
-      String.fromCharCode(byte);
+      String.fromCharCode(
+        byte
+      );
   }
+
 
   return btoa(binary)
     .replace(/\+/g, "-")
@@ -73,12 +80,16 @@ function base64UrlToBytes(
       .replace(/-/g, "+")
       .replace(/_/g, "/");
 
+
   const padding =
     normalized.length % 4 === 0
       ? ""
       : "=".repeat(
           4 -
-            (normalized.length % 4)
+            (
+              normalized.length %
+              4
+            )
         );
 
 
@@ -92,7 +103,9 @@ function base64UrlToBytes(
   return Uint8Array.from(
     binary,
     (character) =>
-      character.charCodeAt(0)
+      character.charCodeAt(
+        0
+      )
   );
 }
 
@@ -111,7 +124,9 @@ async function getSigningKey(
 ) {
   return crypto.subtle.importKey(
     "raw",
-    encodeText(secret),
+    encodeText(
+      secret
+    ),
     {
       name: "HMAC",
       hash: "SHA-256",
@@ -139,7 +154,9 @@ async function signValue(
     await crypto.subtle.sign(
       "HMAC",
       key,
-      encodeText(value)
+      encodeText(
+        value
+      )
     );
 
 
@@ -169,9 +186,10 @@ async function verifySignature(
       base64UrlToBytes(
         signature
       ),
-      encodeText(value)
+      encodeText(
+        value
+      )
     );
-
   } catch {
     return false;
   }
@@ -197,7 +215,6 @@ function decodePayload(
 ):
   | AdminSessionPayload
   | null {
-
   try {
     const bytes =
       base64UrlToBytes(
@@ -227,6 +244,12 @@ function decodePayload(
       !isValidRole(
         parsed.role
       ) ||
+      typeof parsed.sessionVersion !==
+        "number" ||
+      !Number.isInteger(
+        parsed.sessionVersion
+      ) ||
+      parsed.sessionVersion < 0 ||
       typeof parsed.exp !==
         "number"
     ) {
@@ -244,10 +267,12 @@ function decodePayload(
       role:
         parsed.role,
 
+      sessionVersion:
+        parsed.sessionVersion,
+
       exp:
         parsed.exp,
     };
-
   } catch {
     return null;
   }
@@ -255,7 +280,8 @@ function decodePayload(
 
 
 export async function createAdminToken(
-  session: AdminSessionInput,
+  session:
+    AdminSessionInput,
   secret: string
 ) {
   const now =
@@ -275,6 +301,9 @@ export async function createAdminToken(
 
       role:
         session.role,
+
+      sessionVersion:
+        session.sessionVersion,
 
       exp:
         now +

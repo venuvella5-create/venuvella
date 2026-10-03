@@ -65,6 +65,7 @@ export async function requireAdminSession() {
         email: true,
         role: true,
         isActive: true,
+        sessionVersion: true,
       },
     });
 
@@ -89,6 +90,16 @@ export async function requireAdminSession() {
   }
 
 
+  if (
+    user.sessionVersion !==
+    session.sessionVersion
+  ) {
+    throw new Error(
+      "Unauthorized admin action."
+    );
+  }
+
+
   return {
     userId:
       user.id,
@@ -98,6 +109,9 @@ export async function requireAdminSession() {
 
     role:
       user.role as AdminSessionRole,
+
+    sessionVersion:
+      user.sessionVersion,
 
     exp:
       session.exp,

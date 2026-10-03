@@ -1,6 +1,10 @@
 ﻿import Link from "next/link";
 
 import {
+  logoutAdminAction,
+} from "@/app/admin/login/actions";
+
+import {
   requirePageRole,
 } from "@/lib/auth/require-admin";
 
@@ -149,26 +153,44 @@ export default async function AdminDashboardPage() {
 
       <div className="container-shell">
 
-        <div>
+        <div className="flex flex-wrap items-start justify-between gap-6">
 
-          <p className="admin-eyebrow">
-            Venuvella
-          </p>
+          <div>
 
-
-          <h1 className="display-serif mt-2 text-5xl">
-            Admin dashboard
-          </h1>
+            <p className="admin-eyebrow">
+              Venuvella
+            </p>
 
 
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-            Signed in as{" "}
-            <span className="font-medium text-[var(--ink)]">
-              {session.email}
-            </span>
-            {" "}Â·{" "}
-            {session.role}
-          </p>
+            <h1 className="display-serif mt-2 text-5xl">
+              Admin dashboard
+            </h1>
+
+
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+              Signed in as{" "}
+              <span className="font-medium text-[var(--ink)]">
+                {session.email}
+              </span>
+              {" · "}
+              {session.role}
+            </p>
+
+          </div>
+
+
+          <form
+            action={
+              logoutAdminAction
+            }
+          >
+            <button
+              type="submit"
+              className="admin-secondary"
+            >
+              Log out
+            </button>
+          </form>
 
         </div>
 
@@ -460,7 +482,7 @@ export default async function AdminDashboardPage() {
 
                           <p className="mt-1 text-xs text-[var(--muted)]">
                             {article.author.name}
-                            {" Â· "}
+                            {" · "}
                             {article.category.name}
                           </p>
 

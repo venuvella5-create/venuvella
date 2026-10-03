@@ -1,7 +1,12 @@
 "use server";
 
 import {
+  createHmac,
+} from "node:crypto";
+
+import {
   cookies,
+  headers,
 } from "next/headers";
 
 import {
@@ -31,6 +36,16 @@ export type AdminLoginState = {
   ok: boolean;
   message: string;
 };
+
+
+const LOGIN_WINDOW_MINUTES =
+  15;
+
+const MAX_EMAIL_FAILURES =
+  5;
+
+const MAX_IP_FAILURES =
+  20;
 
 
 function safeCompare(
@@ -103,12 +118,260 @@ function sanitizeNextPath(
 }
 
 
+function createRateLimitKey(
+  value: string,
+  secret: string
+) {
+  return createHmac(
+    "sha256",
+    secret
+  )
+    .update(
+      value
+    )
+    .digest(
+      "hex"
+    );
+}
+
+
+async function getClientIp() {
+  const requestHeaders =
+    await headers();
+
+
+  const forwardedFor =
+    requestHeaders.get(
+      "x-forwarded-for"
+    );
+
+
+  if (forwardedFor) {
+    const firstAddress =
+      forwardedFor
+        .split(",")[0]
+        ?.trim();
+
+
+    if (firstAddress) {
+      return firstAddress;
+    }
+  }
+
+
+  const realIp =
+    requestHeaders.get(
+      "x-real-ip"
+    );
+
+
+  if (realIp) {
+    return realIp.trim();
+  }
+
+
+  const connectingIp =
+    requestHeaders.get(
+      "cf-connecting-ip"
+    );
+
+
+  if (connectingIp) {
+    return connectingIp.trim();
+  }
+
+
+  return "unknown";
+}
+
+
+async function isLoginRateLimited(
+  emailKey: string,
+  ipKey: string
+) {
+  const windowStart =
+    new Date(
+      Date.now() -
+        LOGIN_WINDOW_MINUTES *
+          60 *
+          1000
+    );
+
+
+  const [
+    emailFailures,
+    ipFailures,
+  ] = await Promise.all([
+    prisma.auditLog.count({
+      where: {
+        action:
+          "ADMIN_LOGIN_FAILED",
+
+        entity:
+          "AUTH_EMAIL",
+
+        entityId:
+          emailKey,
+
+        createdAt: {
+          gte:
+            windowStart,
+        },
+      },
+    }),
+
+    prisma.auditLog.count({
+      where: {
+        action:
+          "ADMIN_LOGIN_FAILED",
+
+        entity:
+          "AUTH_IP",
+
+        entityId:
+          ipKey,
+
+        createdAt: {
+          gte:
+            windowStart,
+        },
+      },
+    }),
+  ]);
+
+
+  return (
+    emailFailures >=
+      MAX_EMAIL_FAILURES ||
+    ipFailures >=
+      MAX_IP_FAILURES
+  );
+}
+
+
+async function recordFailedLogin(
+  emailKey: string,
+  ipKey: string
+) {
+  await prisma.auditLog.createMany({
+    data: [
+      {
+        action:
+          "ADMIN_LOGIN_FAILED",
+
+        entity:
+          "AUTH_EMAIL",
+
+        entityId:
+          emailKey,
+      },
+
+      {
+        action:
+          "ADMIN_LOGIN_FAILED",
+
+        entity:
+          "AUTH_IP",
+
+        entityId:
+          ipKey,
+      },
+    ],
+  });
+}
+
+
+async function recordSuccessfulLogin(
+  userId: string
+) {
+  await prisma.auditLog.create({
+    data: {
+      userId,
+
+      action:
+        "ADMIN_LOGIN_SUCCESS",
+
+      entity:
+        "AUTH",
+
+      entityId:
+        userId,
+    },
+  });
+}
+
+
+async function establishSession({
+  userId,
+  email,
+  role,
+  sessionVersion,
+  sessionSecret,
+  nextPath,
+}: {
+  userId: string;
+  email: string;
+
+  role:
+    | "ADMIN"
+    | "EDITOR"
+    | "AUTHOR"
+    | "ANALYST";
+
+  sessionVersion: number;
+  sessionSecret: string;
+  nextPath: string;
+}) {
+  const token =
+    await createAdminToken(
+      {
+        userId,
+        email,
+        role,
+        sessionVersion,
+      },
+
+      sessionSecret
+    );
+
+
+  const cookieStore =
+    await cookies();
+
+
+  cookieStore.set(
+    getAdminCookieName(),
+    token,
+    {
+      httpOnly: true,
+
+      secure:
+        process.env.NODE_ENV ===
+        "production",
+
+      sameSite:
+        "lax",
+
+      path:
+        "/",
+
+      maxAge:
+        getAdminSessionDurationSeconds(),
+    }
+  );
+
+
+  redirect(
+    nextPath
+  );
+}
+
+
 export async function loginAdminAction(
   _previous:
     AdminLoginState,
   formData: FormData
 ): Promise<AdminLoginState> {
-
   const sessionSecret =
     process.env.ADMIN_SESSION_SECRET;
 
@@ -159,9 +422,51 @@ export async function loginAdminAction(
   }
 
 
+  const clientIp =
+    await getClientIp();
+
+
+  const emailKey =
+    createRateLimitKey(
+      `email:${email}`,
+      sessionSecret
+    );
+
+
+  const ipKey =
+    createRateLimitKey(
+      `ip:${clientIp}`,
+      sessionSecret
+    );
+
+
+  const rateLimited =
+    await isLoginRateLimited(
+      emailKey,
+      ipKey
+    );
+
+
+  if (rateLimited) {
+    return {
+      ok: false,
+
+      message:
+        "Too many login attempts. Please try again later.",
+    };
+  }
+
+
+  const nextPath =
+    sanitizeNextPath(
+      formData.get(
+        "next"
+      )
+    );
+
+
   /*
-   * First attempt normal database-backed
-   * staff authentication.
+   * Database-backed staff authentication.
    */
 
   const existingUser =
@@ -176,6 +481,7 @@ export async function loginAdminAction(
         role: true,
         passwordHash: true,
         isActive: true,
+        sessionVersion: true,
       },
     });
 
@@ -193,7 +499,6 @@ export async function loginAdminAction(
 
 
     if (passwordMatches) {
-
       await prisma.user.update({
         where: {
           id:
@@ -207,74 +512,34 @@ export async function loginAdminAction(
       });
 
 
-      const token =
-        await createAdminToken(
-          {
-            userId:
-              existingUser.id,
-
-            email:
-              existingUser.email,
-
-            role:
-              existingUser.role,
-          },
-
-          sessionSecret
-        );
-
-
-      const cookieStore =
-        await cookies();
-
-
-      cookieStore.set(
-        getAdminCookieName(),
-        token,
-        {
-          httpOnly: true,
-
-          secure:
-            process.env.NODE_ENV ===
-            "production",
-
-          sameSite:
-            "lax",
-
-          path:
-            "/",
-
-          maxAge:
-            getAdminSessionDurationSeconds(),
-        }
+      await recordSuccessfulLogin(
+        existingUser.id
       );
 
 
-      const nextPath =
-        sanitizeNextPath(
-          formData.get(
-            "next"
-          )
-        );
+      await establishSession({
+        userId:
+          existingUser.id,
 
+        email:
+          existingUser.email,
 
-      redirect(
-        nextPath
-      );
+        role:
+          existingUser.role,
+
+        sessionVersion:
+          existingUser.sessionVersion,
+
+        sessionSecret,
+
+        nextPath,
+      });
     }
   }
 
 
   /*
-   * Bootstrap / emergency administrator.
-   *
-   * The existing ADMIN_EMAIL and
-   * ADMIN_PASSWORD environment credentials
-   * remain supported so the current master
-   * administrator is not locked out.
-   *
-   * Additional staff accounts authenticate
-   * using their database passwordHash.
+   * Bootstrap / emergency master administrator.
    */
 
   const configuredEmail =
@@ -309,6 +574,12 @@ export async function loginAdminAction(
     !masterEmailMatches ||
     !masterPasswordMatches
   ) {
+    await recordFailedLogin(
+      emailKey,
+      ipKey
+    );
+
+
     return {
       ok: false,
 
@@ -317,15 +588,6 @@ export async function loginAdminAction(
     };
   }
 
-
-  /*
-   * Ensure the environment-based master
-   * administrator exists in the database.
-   *
-   * It always retains ADMIN access and can
-   * recover access even before staff account
-   * management has been configured.
-   */
 
   const masterUser =
     await prisma.user.upsert({
@@ -364,69 +626,43 @@ export async function loginAdminAction(
         id: true,
         email: true,
         role: true,
+        sessionVersion: true,
       },
     });
 
 
-  const token =
-    await createAdminToken(
-      {
-        userId:
-          masterUser.id,
-
-        email:
-          masterUser.email,
-
-        role:
-          masterUser.role,
-      },
-
-      sessionSecret
-    );
-
-
-  const cookieStore =
-    await cookies();
-
-
-  cookieStore.set(
-    getAdminCookieName(),
-    token,
-    {
-      httpOnly: true,
-
-      secure:
-        process.env.NODE_ENV ===
-        "production",
-
-      sameSite:
-        "lax",
-
-      path:
-        "/",
-
-      maxAge:
-        getAdminSessionDurationSeconds(),
-    }
+  await recordSuccessfulLogin(
+    masterUser.id
   );
 
 
-  const nextPath =
-    sanitizeNextPath(
-      formData.get(
-        "next"
-      )
-    );
+  await establishSession({
+    userId:
+      masterUser.id,
+
+    email:
+      masterUser.email,
+
+    role:
+      masterUser.role,
+
+    sessionVersion:
+      masterUser.sessionVersion,
+
+    sessionSecret,
+
+    nextPath,
+  });
 
 
-  redirect(
-    nextPath
-  );
+  return {
+    ok: true,
+    message: "",
+  };
 }
 
 
 export async function logoutAdminAction() {
-
   const cookieStore =
     await cookies();
 
