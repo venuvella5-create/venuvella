@@ -2,43 +2,85 @@
 
 
 
+
+
+
+
 import {
+
+
 
   Prisma,
 
+
+
   UserRole,
+
+
 
 } from "@prisma/client";
 
 
 
+
+
+
+
 import {
 
+
+
   revalidatePath,
+
+
 
 } from "next/cache";
 
 
 
+
+
+
+
 import {
 
+
+
   requireRole,
+
+
 
 } from "@/lib/auth/require-admin";
 
 
 
+
+
+
+
 import {
 
+
+
   hashPassword,
+
+
 
 } from "@/lib/auth/password";
 
 
 
+
+
+
+
 import {
 
+
+
   prisma,
+
+
 
 } from "@/lib/db/prisma";
 
@@ -46,11 +88,23 @@ import {
 
 
 
+
+
+
+
+
+
 export type StaffActionState = {
+
+
 
   ok: boolean;
 
+
+
   message: string;
+
+
 
 };
 
@@ -58,19 +112,43 @@ export type StaffActionState = {
 
 
 
+
+
+
+
+
+
 const allowedRoles =
+
+
 
   new Set<UserRole>([
 
+
+
     UserRole.ADMIN,
+
+
 
     UserRole.EDITOR,
 
+
+
     UserRole.AUTHOR,
+
+
 
     UserRole.ANALYST,
 
+
+
   ]);
+
+
+
+
+
+
 
 
 
@@ -78,31 +156,63 @@ const allowedRoles =
 
 function normalizeEmail(
 
+
+
   value:
+
+
 
     FormDataEntryValue | null
 
+
+
 ) {
+
+
 
   if (
 
+
+
     typeof value !== "string"
+
+
 
   ) {
 
+
+
     return "";
+
+
 
   }
 
 
 
+
+
+
+
   return value
+
+
 
     .trim()
 
+
+
     .toLowerCase();
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -110,37 +220,75 @@ function normalizeEmail(
 
 function normalizeOptionalString(
 
+
+
   value:
+
+
 
     FormDataEntryValue | null
 
+
+
 ) {
+
+
 
   if (
 
+
+
     typeof value !== "string"
+
+
 
   ) {
 
+
+
     return null;
+
+
 
   }
 
 
 
+
+
+
+
   const trimmed =
+
+
 
     value.trim();
 
 
 
+
+
+
+
   return trimmed.length > 0
+
+
 
     ? trimmed
 
+
+
     : null;
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -148,43 +296,87 @@ function normalizeOptionalString(
 
 function parseRole(
 
+
+
   value:
+
+
 
     FormDataEntryValue | null
 
+
+
 ): UserRole | null {
 
+
+
   if (
+
+
 
     typeof value !== "string"
 
+
+
   ) {
+
+
 
     return null;
 
+
+
   }
+
+
+
+
 
 
 
   if (
 
+
+
     !allowedRoles.has(
+
+
 
       value as UserRole
 
+
+
     )
+
+
 
   ) {
 
+
+
     return null;
 
+
+
   }
+
+
+
+
 
 
 
   return value as UserRole;
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -192,25 +384,51 @@ function parseRole(
 
 function validatePassword(
 
+
+
   password: string
+
+
 
 ) {
 
+
+
   if (
+
+
 
     password.length < 12
 
+
+
   ) {
 
+
+
     return "Password must contain at least 12 characters.";
+
+
 
   }
 
 
 
+
+
+
+
   return null;
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -218,21 +436,43 @@ function validatePassword(
 
 function isUniqueConstraintError(
 
+
+
   error: unknown
+
+
 
 ) {
 
+
+
   return (
+
+
 
     error instanceof
 
+
+
       Prisma.PrismaClientKnownRequestError &&
+
+
 
     error.code === "P2002"
 
+
+
   );
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -240,19 +480,39 @@ function isUniqueConstraintError(
 
 function getMasterAdminEmail() {
 
+
+
   return (
+
+
 
     process.env.ADMIN_EMAIL
 
+
+
       ?.trim()
+
+
 
       .toLowerCase() ??
 
+
+
     null
+
+
 
   );
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -260,17 +520,31 @@ function getMasterAdminEmail() {
 
 export async function createStaffAction(
 
+
+
   _previousState:
+
+
 
     StaffActionState,
 
+
+
   formData: FormData
+
+
 
 ): Promise<StaffActionState> {
 
+
+
   await requireRole([
 
+
+
     "ADMIN",
+
+
 
   ]);
 
@@ -278,17 +552,39 @@ export async function createStaffAction(
 
 
 
+
+
+
+
+
+
   const name =
+
+
 
     normalizeOptionalString(
 
+
+
       formData.get(
+
+
 
         "name"
 
+
+
       )
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -296,15 +592,31 @@ export async function createStaffAction(
 
   const email =
 
+
+
     normalizeEmail(
+
+
 
       formData.get(
 
+
+
         "email"
+
+
 
       )
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -312,15 +624,31 @@ export async function createStaffAction(
 
   const password =
 
+
+
     String(
+
+
 
       formData.get(
 
+
+
         "password"
+
+
 
       ) ?? ""
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -328,15 +656,31 @@ export async function createStaffAction(
 
   const role =
 
+
+
     parseRole(
+
+
 
       formData.get(
 
+
+
         "role"
+
+
 
       )
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -344,13 +688,23 @@ export async function createStaffAction(
 
   const authorId =
 
+
+
     normalizeOptionalString(
+
+
 
       formData.get(
 
+
+
         "authorId"
 
+
+
       )
+
+
 
     );
 
@@ -358,19 +712,43 @@ export async function createStaffAction(
 
 
 
+
+
+
+
+
+
   if (!email) {
+
+
 
     return {
 
+
+
       ok: false,
+
+
 
       message:
 
+
+
         "Email is required.",
+
+
 
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -378,21 +756,43 @@ export async function createStaffAction(
 
   if (
 
+
+
     !email.includes("@")
+
+
 
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "Enter a valid email address.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -400,17 +800,35 @@ export async function createStaffAction(
 
   if (!role) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "Select a valid staff role.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -418,11 +836,23 @@ export async function createStaffAction(
 
   const passwordError =
 
+
+
     validatePassword(
+
+
 
       password
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -430,15 +860,27 @@ export async function createStaffAction(
 
   if (passwordError) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         passwordError,
 
+
+
     };
+
+
 
   }
 
@@ -446,27 +888,59 @@ export async function createStaffAction(
 
 
 
+
+
+
+
+
+
   if (
+
+
 
     role ===
 
+
+
       UserRole.AUTHOR &&
+
+
 
     !authorId
 
+
+
   ) {
+
+
 
     return {
 
+
+
       ok: false,
+
+
 
       message:
 
+
+
         "AUTHOR accounts must be linked to an author profile.",
+
+
 
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -474,25 +948,51 @@ export async function createStaffAction(
 
   if (
 
+
+
     role !==
+
+
 
       UserRole.AUTHOR &&
 
+
+
     authorId
+
+
 
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "Only AUTHOR accounts can be linked to an author profile.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -500,27 +1000,51 @@ export async function createStaffAction(
 
   if (authorId) {
 
+
+
     const author =
+
+
 
       await prisma.author.findUnique({
 
+
+
         where: {
+
+
 
           id:
 
+
+
             authorId,
 
+
+
         },
+
+
+
+
 
 
 
         select: {
 
+
+
           id: true,
+
+
 
           userId: true,
 
+
+
         },
+
+
 
       });
 
@@ -528,19 +1052,43 @@ export async function createStaffAction(
 
 
 
+
+
+
+
+
+
     if (!author) {
+
+
 
       return {
 
+
+
         ok: false,
+
+
 
         message:
 
+
+
           "The selected author profile does not exist.",
+
+
 
       };
 
+
+
     }
+
+
+
+
+
+
 
 
 
@@ -548,17 +1096,31 @@ export async function createStaffAction(
 
     if (author.userId) {
 
+
+
       return {
+
+
 
         ok: false,
 
+
+
         message:
+
+
 
           "The selected author profile is already linked to another staff account.",
 
+
+
       };
 
+
+
     }
+
+
 
   }
 
@@ -566,11 +1128,23 @@ export async function createStaffAction(
 
 
 
+
+
+
+
+
+
   const passwordHash =
+
+
 
     await hashPassword(
 
+
+
       password
+
+
 
     );
 
@@ -578,45 +1152,92 @@ export async function createStaffAction(
 
 
 
+
+
+
+
+
+
   try {
+
+
 
     await prisma.$transaction(
 
+
+
       async (
+
+
 
         transaction
 
+
+
       ) => {
+
+
 
         const user =
 
+
+
           await transaction.user.create({
+
+
 
             data: {
 
+
+
               name,
 
+
+
               email,
+
+
 
               passwordHash,
 
               role,
 
               isActive:
-
                 true,
 
+              mustChangePassword:
+                true,
+
+              passwordChangedAt:
+                new Date(),
+
             },
+
+
+
+
 
 
 
             select: {
 
+
+
               id: true,
+
+
 
             },
 
+
+
           });
+
+
+
+
+
+
 
 
 
@@ -624,55 +1245,107 @@ export async function createStaffAction(
 
         if (authorId) {
 
+
+
           await transaction.author.update({
+
+
 
             where: {
 
+
+
               id:
+
+
 
                 authorId,
 
+
+
             },
+
+
+
+
 
 
 
             data: {
 
+
+
               userId:
+
+
 
                 user.id,
 
+
+
             },
+
+
 
           });
 
+
+
         }
+
+
 
       }
 
+
+
     );
+
+
 
   } catch (error) {
 
+
+
     if (
+
+
 
       isUniqueConstraintError(
 
+
+
         error
+
+
 
       )
 
+
+
     ) {
+
+
 
       return {
 
+
+
         ok: false,
+
+
 
         message:
 
+
+
           "A staff account already exists with that email address.",
 
+
+
       };
+
+
 
     }
 
@@ -680,11 +1353,23 @@ export async function createStaffAction(
 
 
 
+
+
+
+
+
+
     console.error(
+
+
 
       "Failed to create staff account.",
 
+
+
       error
+
+
 
     );
 
@@ -692,15 +1377,31 @@ export async function createStaffAction(
 
 
 
+
+
+
+
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "Unable to create the staff account.",
 
+
+
     };
+
+
 
   }
 
@@ -708,9 +1409,19 @@ export async function createStaffAction(
 
 
 
+
+
+
+
+
+
   revalidatePath(
 
+
+
     "/admin/staff"
+
+
 
   );
 
@@ -718,17 +1429,39 @@ export async function createStaffAction(
 
 
 
+
+
+
+
+
+
   return {
+
+
 
     ok: true,
 
+
+
     message:
+
+
 
       "Staff account created successfully.",
 
+
+
   };
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -736,19 +1469,35 @@ export async function createStaffAction(
 
 export async function updateStaffAction(
 
+
+
   _previousState:
+
+
 
     StaffActionState,
 
+
+
   formData: FormData
+
+
 
 ): Promise<StaffActionState> {
 
+
+
   const session =
+
+
 
     await requireRole([
 
+
+
       "ADMIN",
+
+
 
     ]);
 
@@ -756,15 +1505,31 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
   const userId =
+
+
 
     normalizeOptionalString(
 
+
+
       formData.get(
+
+
 
         "userId"
 
+
+
       )
+
+
 
     );
 
@@ -772,19 +1537,43 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
   if (!userId) {
+
+
 
     return {
 
+
+
       ok: false,
+
+
 
       message:
 
+
+
         "Staff account ID is missing.",
+
+
 
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -792,41 +1581,83 @@ export async function updateStaffAction(
 
   const existingUser =
 
+
+
     await prisma.user.findUnique({
+
+
 
       where: {
 
+
+
         id:
+
+
 
           userId,
 
+
+
       },
+
+
+
+
 
 
 
       select: {
 
+
+
         id: true,
 
+
+
         email: true,
+
+
 
         role: true,
 
 
 
+
+
+
+
         author: {
+
+
 
           select: {
 
+
+
             id: true,
+
+
 
           },
 
+
+
         },
+
+
 
       },
 
+
+
     });
+
+
+
+
+
+
 
 
 
@@ -834,17 +1665,35 @@ export async function updateStaffAction(
 
   if (!existingUser) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "Staff account not found.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -852,15 +1701,31 @@ export async function updateStaffAction(
 
   const name =
 
+
+
     normalizeOptionalString(
+
+
 
       formData.get(
 
+
+
         "name"
+
+
 
       )
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -868,15 +1733,31 @@ export async function updateStaffAction(
 
   const email =
 
+
+
     normalizeEmail(
+
+
 
       formData.get(
 
+
+
         "email"
+
+
 
       )
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -884,15 +1765,31 @@ export async function updateStaffAction(
 
   const role =
 
+
+
     parseRole(
+
+
 
       formData.get(
 
+
+
         "role"
+
+
 
       )
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -900,15 +1797,31 @@ export async function updateStaffAction(
 
   const authorId =
 
+
+
     normalizeOptionalString(
+
+
 
       formData.get(
 
+
+
         "authorId"
+
+
 
       )
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -916,15 +1829,31 @@ export async function updateStaffAction(
 
   const newPassword =
 
+
+
     String(
+
+
 
       formData.get(
 
+
+
         "password"
+
+
 
       ) ?? ""
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -932,17 +1861,35 @@ export async function updateStaffAction(
 
   if (!email) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "Email is required.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -950,21 +1897,43 @@ export async function updateStaffAction(
 
   if (
 
+
+
     !email.includes("@")
+
+
 
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "Enter a valid email address.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -972,17 +1941,35 @@ export async function updateStaffAction(
 
   if (!role) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "Select a valid staff role.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -990,7 +1977,15 @@ export async function updateStaffAction(
 
   const masterAdminEmail =
 
+
+
     getMasterAdminEmail();
+
+
+
+
+
+
 
 
 
@@ -998,15 +1993,27 @@ export async function updateStaffAction(
 
   const isMasterAdmin =
 
+
+
     masterAdminEmail !==
+
+
 
       null &&
 
+
+
     existingUser.email
+
+
 
       .trim()
 
+
+
       .toLowerCase() ===
+
+
 
       masterAdminEmail;
 
@@ -1014,23 +2021,47 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
   if (
+
+
 
     isMasterAdmin &&
 
+
+
     role !== UserRole.ADMIN
+
+
 
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "The master administrator role cannot be changed.",
 
+
+
     };
+
+
 
   }
 
@@ -1038,25 +2069,51 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
   if (
+
+
 
     session.userId ===
 
+
+
       existingUser.id &&
+
+
 
     role !== UserRole.ADMIN
 
+
+
   ) {
+
+
 
     return {
 
+
+
       ok: false,
 
+
+
       message:
+
+
 
         "You cannot remove your own administrator role.",
 
+
+
     };
+
+
 
   }
 
@@ -1064,27 +2121,59 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
   if (
+
+
 
     role ===
 
+
+
       UserRole.AUTHOR &&
+
+
 
     !authorId
 
+
+
   ) {
+
+
 
     return {
 
+
+
       ok: false,
+
+
 
       message:
 
+
+
         "AUTHOR accounts must be linked to an author profile.",
+
+
 
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1092,25 +2181,51 @@ export async function updateStaffAction(
 
   if (
 
+
+
     role !==
+
+
 
       UserRole.AUTHOR &&
 
+
+
     authorId
+
+
 
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "Only AUTHOR accounts can be linked to an author profile.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1118,11 +2233,19 @@ export async function updateStaffAction(
 
   if (newPassword) {
 
+
+
     const passwordError =
+
+
 
       validatePassword(
 
+
+
         newPassword
+
+
 
       );
 
@@ -1130,21 +2253,47 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
     if (passwordError) {
+
+
 
       return {
 
+
+
         ok: false,
+
+
 
         message:
 
+
+
           passwordError,
+
+
 
       };
 
+
+
     }
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1152,27 +2301,51 @@ export async function updateStaffAction(
 
   if (authorId) {
 
+
+
     const author =
+
+
 
       await prisma.author.findUnique({
 
+
+
         where: {
+
+
 
           id:
 
+
+
             authorId,
 
+
+
         },
+
+
+
+
 
 
 
         select: {
 
+
+
           id: true,
+
+
 
           userId: true,
 
+
+
         },
+
+
 
       });
 
@@ -1180,19 +2353,43 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
     if (!author) {
+
+
 
       return {
 
+
+
         ok: false,
+
+
 
         message:
 
+
+
           "The selected author profile does not exist.",
+
+
 
       };
 
+
+
     }
+
+
+
+
+
+
 
 
 
@@ -1200,27 +2397,55 @@ export async function updateStaffAction(
 
     if (
 
+
+
       author.userId &&
+
+
 
       author.userId !==
 
+
+
         existingUser.id
+
+
 
     ) {
 
+
+
       return {
+
+
 
         ok: false,
 
+
+
         message:
+
+
 
           "The selected author profile is already linked to another staff account.",
 
+
+
       };
+
+
 
     }
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1228,13 +2453,23 @@ export async function updateStaffAction(
 
   const passwordHash =
 
+
+
     newPassword
+
+
 
       ? await hashPassword(
 
+
+
           newPassword
 
+
+
         )
+
+
 
       : undefined;
 
@@ -1242,57 +2477,119 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
   try {
+
+
 
     await prisma.$transaction(
 
+
+
       async (
+
+
 
         transaction
 
+
+
       ) => {
+
+
 
         if (
 
+
+
           existingUser.author &&
+
+
 
           (
 
+
+
             role !==
+
+
 
               UserRole.AUTHOR ||
 
+
+
             existingUser.author.id !==
+
+
 
               authorId
 
+
+
           )
+
+
 
         ) {
 
+
+
           await transaction.author.update({
+
+
 
             where: {
 
+
+
               id:
+
+
 
                 existingUser.author.id,
 
+
+
             },
+
+
+
+
 
 
 
             data: {
 
+
+
               userId:
+
+
 
                 null,
 
+
+
             },
+
+
 
           });
 
+
+
         }
+
+
+
+
+
+
 
 
 
@@ -1300,31 +2597,63 @@ export async function updateStaffAction(
 
         await transaction.user.update({
 
+
+
           where: {
+
+
 
             id:
 
+
+
               existingUser.id,
+
+
 
           },
 
 
 
+
+
+
+
           data: {
+
+
 
             name,
 
+
+
             email,
+
+
 
             role,
 
 
 
+
+
+
+
             ...(passwordHash
+
+
 
               ? {
 
+
+
                   passwordHash,
+
+                  mustChangePassword:
+                    true,
+
+                  passwordChangedAt:
+                    new Date(),
 
                   sessionVersion: {
                     increment: 1,
@@ -1332,9 +2661,15 @@ export async function updateStaffAction(
 
                 }
 
+
+
               : {}),
 
+
+
           },
+
+
 
         });
 
@@ -1342,65 +2677,131 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
         if (
+
+
 
           role ===
 
+
+
             UserRole.AUTHOR &&
+
+
 
           authorId
 
+
+
         ) {
+
+
 
           await transaction.author.update({
 
+
+
             where: {
+
+
 
               id:
 
+
+
                 authorId,
 
+
+
             },
+
+
+
+
 
 
 
             data: {
 
+
+
               userId:
+
+
 
                 existingUser.id,
 
+
+
             },
+
+
 
           });
 
+
+
         }
+
+
 
       }
 
+
+
     );
+
+
 
   } catch (error) {
 
+
+
     if (
+
+
 
       isUniqueConstraintError(
 
+
+
         error
+
+
 
       )
 
+
+
     ) {
+
+
 
       return {
 
+
+
         ok: false,
+
+
 
         message:
 
+
+
           "Another staff account already uses that email address.",
 
+
+
       };
+
+
 
     }
 
@@ -1408,11 +2809,23 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
     console.error(
+
+
 
       "Failed to update staff account.",
 
+
+
       error
+
+
 
     );
 
@@ -1420,15 +2833,31 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "Unable to update the staff account.",
 
+
+
     };
+
+
 
   }
 
@@ -1436,19 +2865,43 @@ export async function updateStaffAction(
 
 
 
+
+
+
+
+
+
   revalidatePath(
+
+
 
     "/admin/staff"
 
+
+
   );
+
+
+
+
 
 
 
   revalidatePath(
 
+
+
     `/admin/staff/${existingUser.id}`
 
+
+
   );
+
+
+
+
+
+
 
 
 
@@ -1456,15 +2909,31 @@ export async function updateStaffAction(
 
   return {
 
+
+
     ok: true,
+
+
 
     message:
 
+
+
       "Staff account updated successfully.",
+
+
 
   };
 
+
+
 }
+
+
+
+
+
+
 
 
 
@@ -1472,19 +2941,35 @@ export async function updateStaffAction(
 
 export async function setStaffActiveAction(
 
+
+
   _previousState:
+
+
 
     StaffActionState,
 
+
+
   formData: FormData
+
+
 
 ): Promise<StaffActionState> {
 
+
+
   const session =
+
+
 
     await requireRole([
 
+
+
       "ADMIN",
+
+
 
     ]);
 
@@ -1492,15 +2977,31 @@ export async function setStaffActiveAction(
 
 
 
+
+
+
+
+
+
   const userId =
+
+
 
     normalizeOptionalString(
 
+
+
       formData.get(
+
+
 
         "userId"
 
+
+
       )
+
+
 
     );
 
@@ -1508,19 +3009,43 @@ export async function setStaffActiveAction(
 
 
 
+
+
+
+
+
+
   if (!userId) {
+
+
 
     return {
 
+
+
       ok: false,
+
+
 
       message:
 
+
+
         "Staff account ID is missing.",
+
+
 
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1528,15 +3053,31 @@ export async function setStaffActiveAction(
 
   const activeValue =
 
+
+
     String(
+
+
 
       formData.get(
 
+
+
         "isActive"
+
+
 
       ) ?? ""
 
+
+
     );
+
+
+
+
+
+
 
 
 
@@ -1544,7 +3085,11 @@ export async function setStaffActiveAction(
 
   const isActive =
 
+
+
     activeValue ===
+
+
 
     "true";
 
@@ -1552,29 +3097,59 @@ export async function setStaffActiveAction(
 
 
 
+
+
+
+
+
+
   const user =
+
+
 
     await prisma.user.findUnique({
 
+
+
       where: {
+
+
 
         id:
 
+
+
           userId,
 
+
+
       },
+
+
+
+
 
 
 
       select: {
 
+
+
         id: true,
+
+
 
         email: true,
 
+
+
         isActive: true,
 
+
+
       },
+
+
 
     });
 
@@ -1582,19 +3157,43 @@ export async function setStaffActiveAction(
 
 
 
+
+
+
+
+
+
   if (!user) {
+
+
 
     return {
 
+
+
       ok: false,
+
+
 
       message:
 
+
+
         "Staff account not found.",
+
+
 
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1602,25 +3201,51 @@ export async function setStaffActiveAction(
 
   if (
 
+
+
     !isActive &&
+
+
 
     user.id ===
 
+
+
       session.userId
+
+
 
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "You cannot deactivate your own account.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1628,7 +3253,15 @@ export async function setStaffActiveAction(
 
   const masterAdminEmail =
 
+
+
     getMasterAdminEmail();
+
+
+
+
+
+
 
 
 
@@ -1636,15 +3269,27 @@ export async function setStaffActiveAction(
 
   const isMasterAdmin =
 
+
+
     masterAdminEmail !==
+
+
 
       null &&
 
+
+
     user.email
+
+
 
       .trim()
 
+
+
       .toLowerCase() ===
+
+
 
       masterAdminEmail;
 
@@ -1652,25 +3297,55 @@ export async function setStaffActiveAction(
 
 
 
+
+
+
+
+
+
   if (
+
+
 
     !isActive &&
 
+
+
     isMasterAdmin
+
+
 
   ) {
 
+
+
     return {
+
+
 
       ok: false,
 
+
+
       message:
+
+
 
         "The master administrator account cannot be deactivated.",
 
+
+
     };
 
+
+
   }
+
+
+
+
+
+
 
 
 
@@ -1678,25 +3353,47 @@ export async function setStaffActiveAction(
 
   await prisma.user.update({
 
+
+
     where: {
+
+
 
       id:
 
+
+
         user.id,
 
+
+
     },
+
+
+
+
 
 
 
     data: {
 
+
+
       isActive,
 
+
+
       sessionVersion: {
+
         increment: 1,
+
       },
 
+
+
     },
+
+
 
   });
 
@@ -1704,19 +3401,43 @@ export async function setStaffActiveAction(
 
 
 
+
+
+
+
+
+
   revalidatePath(
+
+
 
     "/admin/staff"
 
+
+
   );
+
+
+
+
 
 
 
   revalidatePath(
 
+
+
     `/admin/staff/${user.id}`
 
+
+
   );
+
+
+
+
+
+
 
 
 
@@ -1724,124 +3445,246 @@ export async function setStaffActiveAction(
 
   return {
 
+
+
     ok: true,
 
 
 
+
+
+
+
     message:
+
+
 
       isActive
 
+
+
         ? "Staff account activated successfully."
+
+
 
         : "Staff account deactivated successfully.",
 
+
+
   };
 
+
+
 }
+
+
+
 
 
 export async function revokeStaffSessionsAction(
+
   _previousState:
+
     StaffActionState,
+
   formData: FormData
+
 ): Promise<StaffActionState> {
+
   const session =
+
     await requireRole([
+
       "ADMIN",
+
     ]);
 
 
+
+
+
   const userId =
+
     normalizeOptionalString(
+
       formData.get(
+
         "userId"
+
       )
+
     );
 
 
+
+
+
   if (!userId) {
+
     return {
+
       ok: false,
+
       message:
+
         "Staff account ID is missing.",
+
     };
+
   }
+
+
+
 
 
   const user =
+
     await prisma.user.findUnique({
+
       where: {
+
         id:
+
           userId,
+
       },
 
+
+
       select: {
+
         id: true,
+
         email: true,
+
       },
+
     });
 
 
+
+
+
   if (!user) {
+
     return {
+
       ok: false,
+
       message:
+
         "Staff account not found.",
+
     };
+
   }
 
 
+
+
+
   await prisma.$transaction([
+
     prisma.user.update({
+
       where: {
+
         id:
+
           user.id,
+
       },
 
+
+
       data: {
+
         sessionVersion: {
+
           increment: 1,
+
         },
+
       },
+
     }),
+
+
 
     prisma.auditLog.create({
+
       data: {
+
         userId:
+
           session.userId,
 
+
+
         action:
+
           "ADMIN_SESSIONS_REVOKED",
 
+
+
         entity:
+
           "USER",
 
+
+
         entityId:
+
           user.id,
 
+
+
         metadata: {
+
           targetEmail:
+
             user.email,
+
         },
+
       },
+
     }),
+
   ]);
 
 
-  revalidatePath(
-    "/admin/staff"
-  );
+
+
 
   revalidatePath(
-    `/admin/staff/${user.id}`
+
+    "/admin/staff"
+
   );
+
+
+
+  revalidatePath(
+
+    `/admin/staff/${user.id}`
+
+  );
+
+
+
 
 
   return {
+
     ok: true,
+
     message:
+
       "All existing sessions for this staff account have been revoked.",
+
   };
+
 }
+
 

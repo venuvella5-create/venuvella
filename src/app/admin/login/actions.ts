@@ -308,6 +308,7 @@ async function establishSession({
   sessionVersion,
   sessionSecret,
   nextPath,
+  mustChangePassword,
 }: {
   userId: string;
   email: string;
@@ -321,6 +322,7 @@ async function establishSession({
   sessionVersion: number;
   sessionSecret: string;
   nextPath: string;
+  mustChangePassword: boolean;
 }) {
   const token =
     await createAdminToken(
@@ -359,6 +361,13 @@ async function establishSession({
         getAdminSessionDurationSeconds(),
     }
   );
+
+
+  if (mustChangePassword) {
+    redirect(
+      "/admin/change-password"
+    );
+  }
 
 
   redirect(
@@ -482,6 +491,7 @@ export async function loginAdminAction(
         passwordHash: true,
         isActive: true,
         sessionVersion: true,
+        mustChangePassword: true,
       },
     });
 
@@ -533,6 +543,9 @@ export async function loginAdminAction(
         sessionSecret,
 
         nextPath,
+
+        mustChangePassword:
+          existingUser.mustChangePassword,
       });
     }
   }
@@ -602,6 +615,9 @@ export async function loginAdminAction(
         isActive:
           true,
 
+        mustChangePassword:
+          false,
+
         lastLoginAt:
           new Date(),
       },
@@ -617,6 +633,9 @@ export async function loginAdminAction(
 
         isActive:
           true,
+
+        mustChangePassword:
+          false,
 
         lastLoginAt:
           new Date(),
@@ -652,6 +671,9 @@ export async function loginAdminAction(
     sessionSecret,
 
     nextPath,
+
+    mustChangePassword:
+      false,
   });
 
 

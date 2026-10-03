@@ -66,6 +66,8 @@ export async function requireAdminSession() {
         role: true,
         isActive: true,
         sessionVersion: true,
+        mustChangePassword: true,
+        passwordChangedAt: true,
       },
     });
 
@@ -113,6 +115,12 @@ export async function requireAdminSession() {
     sessionVersion:
       user.sessionVersion,
 
+    mustChangePassword:
+      user.mustChangePassword,
+
+    passwordChangedAt:
+      user.passwordChangedAt,
+
     exp:
       session.exp,
   };
@@ -125,6 +133,15 @@ export async function requireRole(
 ) {
   const session =
     await requireAdminSession();
+
+
+  if (
+    session.mustChangePassword
+  ) {
+    throw new Error(
+      "Password change required."
+    );
+  }
 
 
   if (
@@ -155,6 +172,15 @@ export async function requirePageRole(
   } catch {
     redirect(
       "/admin/login"
+    );
+  }
+
+
+  if (
+    session.mustChangePassword
+  ) {
+    redirect(
+      "/admin/change-password"
     );
   }
 
