@@ -1,5 +1,8 @@
 ﻿import Link from "next/link";
-import { notFound } from "next/navigation";
+
+import {
+  notFound,
+} from "next/navigation";
 
 import {
   UserRole,
@@ -20,6 +23,61 @@ import {
 
 export const dynamic =
   "force-dynamic";
+
+
+function formatDateTime(
+  value: Date | null
+) {
+  if (!value) {
+    return "Never";
+  }
+
+
+  return new Intl.DateTimeFormat(
+    "en-US",
+    {
+      dateStyle:
+        "medium",
+
+      timeStyle:
+        "short",
+    }
+  ).format(
+    value
+  );
+}
+
+
+function getAuditLabel(
+  action: string
+) {
+  switch (action) {
+    case "ADMIN_LOGIN_SUCCESS":
+      return "Successful login";
+
+    case "ADMIN_PASSWORD_CHANGED":
+      return "Password changed";
+
+    case "ADMIN_SESSIONS_REVOKED":
+      return "Sessions revoked";
+
+    case "ADMIN_LOGIN_FAILED":
+      return "Failed login";
+
+    default:
+      return action
+        .replaceAll(
+          "_",
+          " "
+        )
+        .toLowerCase()
+        .replace(
+          /^./,
+          (character) =>
+            character.toUpperCase()
+        );
+  }
+}
 
 
 export default async function EditStaffPage({
@@ -53,6 +111,9 @@ export default async function EditStaffPage({
         role: true,
         isActive: true,
         lastLoginAt: true,
+        passwordChangedAt: true,
+        mustChangePassword: true,
+        sessionVersion: true,
         createdAt: true,
 
         author: {
@@ -71,8 +132,11 @@ export default async function EditStaffPage({
   }
 
 
-  const availableAuthors =
-    await prisma.author.findMany({
+  const [
+    availableAuthors,
+    recentSecurityEvents,
+  ] = await Promise.all([
+    prisma.author.findMany({
       where: {
         OR: [
           {
@@ -98,7 +162,44 @@ export default async function EditStaffPage({
         slug: true,
         userId: true,
       },
-    });
+    }),
+
+    prisma.auditLog.findMany({
+      where: {
+        OR: [
+          {
+            userId:
+              staffMember.id,
+          },
+
+          {
+            entity:
+              "USER",
+
+            entityId:
+              staffMember.id,
+          },
+        ],
+      },
+
+      orderBy: {
+        createdAt:
+          "desc",
+      },
+
+      take:
+        10,
+
+      select: {
+        id: true,
+        action: true,
+        entity: true,
+        entityId: true,
+        metadata: true,
+        createdAt: true,
+      },
+    }),
+  ]);
 
 
   const roles = [
@@ -139,7 +240,7 @@ export default async function EditStaffPage({
           href="/admin/staff"
           className="admin-link"
         >
-          â† Staff
+          ← Staff
         </Link>
 
 
@@ -158,9 +259,9 @@ export default async function EditStaffPage({
 
 
             <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-              Update account details, role,
-              author access, password, and
-              account status.
+              Update account details,
+              permissions, password security,
+              sessions, and account status.
             </p>
 
           </div>
@@ -170,13 +271,7 @@ export default async function EditStaffPage({
 
             <p>
               Created{" "}
-              {new Intl.DateTimeFormat(
-                "en-US",
-                {
-                  dateStyle:
-                    "medium",
-                }
-              ).format(
+              {formatDateTime(
                 staffMember.createdAt
               )}
             </p>
@@ -184,20 +279,9 @@ export default async function EditStaffPage({
 
             <p className="mt-1">
               Last login:{" "}
-              {staffMember.lastLoginAt
-                ? new Intl.DateTimeFormat(
-                    "en-US",
-                    {
-                      dateStyle:
-                        "medium",
-
-                      timeStyle:
-                        "short",
-                    }
-                  ).format(
-                    staffMember.lastLoginAt
-                  )
-                : "Never"}
+              {formatDateTime(
+                staffMember.lastLoginAt
+              )}
             </p>
 
           </div>
@@ -233,7 +317,89 @@ export default async function EditStaffPage({
         )}
 
 
-        <section className="mt-10 max-w-3xl rounded-2xl border border-[var(--line)] bg-white p-6">
+        <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+              Account status
+            </p>
+
+
+            <p className="mt-3 text-lg font-semibold">
+              {staffMember.isActive
+                ? "Active"
+                : "Inactive"}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+              Password change
+            </p>
+
+
+            <p className="mt-3 text-lg font-semibold">
+              {staffMember.mustChangePassword
+                ? "Required"
+                : "Not required"}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+              Password changed
+            </p>
+
+
+            <p className="mt-3 text-sm font-medium leading-6">
+              {formatDateTime(
+                staffMember.passwordChangedAt
+              )}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+              Last login
+            </p>
+
+
+            <p className="mt-3 text-sm font-medium leading-6">
+              {formatDateTime(
+                staffMember.lastLoginAt
+              )}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+              Session version
+            </p>
+
+
+            <p className="mt-3 text-lg font-semibold">
+              {staffMember.sessionVersion}
+            </p>
+
+          </div>
+
+        </section>
+
+
+        <section className="mt-8 max-w-3xl rounded-2xl border border-[var(--line)] bg-white p-6">
 
           <StaffEditForm
             staffMember={{
@@ -284,6 +450,83 @@ export default async function EditStaffPage({
               isCurrentUser
             }
           />
+
+        </section>
+
+
+        <section className="mt-8 max-w-3xl rounded-2xl border border-[var(--line)] bg-white p-6">
+
+          <p className="admin-eyebrow">
+            Security history
+          </p>
+
+
+          <h2 className="display-serif mt-2 text-3xl">
+            Recent security events
+          </h2>
+
+
+          <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+            Recent authentication, password,
+            and session activity associated
+            with this staff account.
+          </p>
+
+
+          {recentSecurityEvents.length ===
+          0 ? (
+            <div className="mt-6 rounded-xl border border-dashed border-[var(--line)] p-5">
+
+              <p className="text-sm text-[var(--muted)]">
+                No security events have been
+                recorded for this account yet.
+              </p>
+
+            </div>
+          ) : (
+            <div className="mt-6 divide-y divide-[var(--line)]">
+
+              {recentSecurityEvents.map(
+                (event) => (
+
+                  <div
+                    key={event.id}
+                    className="flex flex-wrap items-start justify-between gap-4 py-4"
+                  >
+
+                    <div>
+
+                      <p className="font-medium">
+                        {getAuditLabel(
+                          event.action
+                        )}
+                      </p>
+
+
+                      <p className="mt-1 text-xs uppercase tracking-[0.12em] text-[var(--muted)]">
+                        {event.entity}
+                      </p>
+
+                    </div>
+
+
+                    <div className="text-right">
+
+                      <p className="text-sm text-[var(--muted)]">
+                        {formatDateTime(
+                          event.createdAt
+                        )}
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                )
+              )}
+
+            </div>
+          )}
 
         </section>
 
