@@ -1,21 +1,12 @@
-﻿import Link from "next/link";
-
-
+import Link from "next/link";
 
 import { prisma } from "@/lib/db/prisma";
+
 import { requirePageRole } from "@/lib/auth/require-admin";
-
-
-
-
 
 export const dynamic =
 
   "force-dynamic";
-
-
-
-
 
 type AnalyticsRange =
 
@@ -27,10 +18,6 @@ type AnalyticsRange =
 
   | "all";
 
-
-
-
-
 type DailyTrend = {
 
   date: string;
@@ -41,10 +28,6 @@ type DailyTrend = {
 
 };
 
-
-
-
-
 function startOfDay(
 
   date: Date
@@ -54,8 +37,6 @@ function startOfDay(
   const result =
 
     new Date(date);
-
-
 
   result.setHours(
 
@@ -69,15 +50,9 @@ function startOfDay(
 
   );
 
-
-
   return result;
 
 }
-
-
-
-
 
 function getRangeStart(
 
@@ -93,19 +68,11 @@ function getRangeStart(
 
     );
 
-
-
-
-
   if (range === "today") {
 
     return today;
 
   }
-
-
-
-
 
   if (range === "7d") {
 
@@ -113,23 +80,15 @@ function getRangeStart(
 
       new Date(today);
 
-
-
     start.setDate(
 
       start.getDate() - 6
 
     );
 
-
-
     return start;
 
   }
-
-
-
-
 
   if (range === "30d") {
 
@@ -137,31 +96,19 @@ function getRangeStart(
 
       new Date(today);
 
-
-
     start.setDate(
 
       start.getDate() - 29
 
     );
 
-
-
     return start;
 
   }
 
-
-
-
-
   return null;
 
 }
-
-
-
-
 
 function getRangeLabel(
 
@@ -175,15 +122,11 @@ function getRangeLabel(
 
   }
 
-
-
   if (range === "7d") {
 
     return "Last 7 days";
 
   }
-
-
 
   if (range === "30d") {
 
@@ -191,15 +134,9 @@ function getRangeLabel(
 
   }
 
-
-
   return "All time";
 
 }
-
-
-
-
 
 function formatDateKey(
 
@@ -210,8 +147,6 @@ function formatDateKey(
   const year =
 
     date.getFullYear();
-
-
 
   const month =
 
@@ -227,8 +162,6 @@ function formatDateKey(
 
     );
 
-
-
   const day =
 
     String(
@@ -243,17 +176,9 @@ function formatDateKey(
 
     );
 
-
-
-
-
   return `${year}-${month}-${day}`;
 
 }
-
-
-
-
 
 function formatShortDate(
 
@@ -277,10 +202,6 @@ function formatShortDate(
 
 }
 
-
-
-
-
 function buildDailyTrend(
 
   clickDates: Date[],
@@ -299,15 +220,7 @@ function buildDailyTrend(
 
   }
 
-
-
-
-
   let firstDate: Date;
-
-
-
-
 
   if (startDate) {
 
@@ -333,8 +246,6 @@ function buildDailyTrend(
 
       );
 
-
-
     firstDate =
 
       startOfDay(
@@ -345,10 +256,6 @@ function buildDailyTrend(
 
   }
 
-
-
-
-
   const lastDate =
 
     startOfDay(
@@ -356,10 +263,6 @@ function buildDailyTrend(
       new Date()
 
     );
-
-
-
-
 
   const counts =
 
@@ -370,10 +273,6 @@ function buildDailyTrend(
       number
 
     >();
-
-
-
-
 
   for (
 
@@ -391,8 +290,6 @@ function buildDailyTrend(
 
       );
 
-
-
     counts.set(
 
       key,
@@ -409,17 +306,9 @@ function buildDailyTrend(
 
   }
 
-
-
-
-
   const trend:
 
     DailyTrend[] = [];
-
-
-
-
 
   const cursor =
 
@@ -428,10 +317,6 @@ function buildDailyTrend(
       firstDate
 
     );
-
-
-
-
 
   while (
 
@@ -447,17 +332,11 @@ function buildDailyTrend(
 
       );
 
-
-
-
-
     trend.push({
 
       date:
 
         key,
-
-
 
       label:
 
@@ -467,8 +346,6 @@ function buildDailyTrend(
 
         ),
 
-
-
       clicks:
 
         counts.get(key) ??
@@ -476,10 +353,6 @@ function buildDailyTrend(
         0,
 
     });
-
-
-
-
 
     cursor.setDate(
 
@@ -489,17 +362,9 @@ function buildDailyTrend(
 
   }
 
-
-
-
-
   return trend;
 
 }
-
-
-
-
 
 function getReferrerLabel(
 
@@ -513,10 +378,6 @@ function getReferrerLabel(
 
   }
 
-
-
-
-
   try {
 
     const url =
@@ -526,8 +387,6 @@ function getReferrerLabel(
         referrer
 
       );
-
-
 
     return url.hostname.replace(
 
@@ -545,10 +404,6 @@ function getReferrerLabel(
 
 }
 
-
-
-
-
 function percentage(
 
   value: number,
@@ -562,10 +417,6 @@ function percentage(
     return "0.0";
 
   }
-
-
-
-
 
   return (
 
@@ -583,9 +434,99 @@ function percentage(
 
 }
 
+type ComparisonResult = {
+  label: string;
+  className: string;
+};
 
+function getPreviousRangeStart(
+  range: AnalyticsRange,
+  currentStart: Date
+) {
+  const previousStart = new Date(currentStart);
 
+  if (range === "today") {
+    previousStart.setDate(previousStart.getDate() - 1);
+    return previousStart;
+  }
 
+  if (range === "7d") {
+    previousStart.setDate(previousStart.getDate() - 7);
+    return previousStart;
+  }
+
+  if (range === "30d") {
+    previousStart.setDate(previousStart.getDate() - 30);
+    return previousStart;
+  }
+
+  return null;
+}
+
+function getPreviousRangeLabel(
+  range: AnalyticsRange
+) {
+  if (range === "today") {
+    return "yesterday";
+  }
+
+  if (range === "7d") {
+    return "the previous 7 days";
+  }
+
+  if (range === "30d") {
+    return "the previous 30 days";
+  }
+
+  return null;
+}
+
+function getComparison(
+  current: number,
+  previous: number | null
+): ComparisonResult {
+  if (previous === null) {
+    return {
+      label: "No comparison period",
+      className: "text-[var(--muted)]",
+    };
+  }
+
+  if (previous === 0) {
+    if (current === 0) {
+      return {
+        label: "No change",
+        className: "text-[var(--muted)]",
+      };
+    }
+
+    return {
+      label: "New activity",
+      className: "text-emerald-700",
+    };
+  }
+
+  const change = ((current - previous) / previous) * 100;
+
+  if (Math.abs(change) < 0.05) {
+    return {
+      label: "0.0%",
+      className: "text-[var(--muted)]",
+    };
+  }
+
+  if (change > 0) {
+    return {
+      label: `↑ ${change.toFixed(1)}%`,
+      className: "text-emerald-700",
+    };
+  }
+
+  return {
+    label: `↓ ${Math.abs(change).toFixed(1)}%`,
+    className: "text-rose-700",
+  };
+}
 
 export default async function AnalyticsPage({
 
@@ -602,17 +543,16 @@ export default async function AnalyticsPage({
 }) {
 
     await requirePageRole([
+
     "ADMIN",
+
     "ANALYST",
+
   ]);
 
 const params =
 
     await searchParams;
-
-
-
-
 
   const allowedRanges:
 
@@ -628,19 +568,11 @@ const params =
 
     ];
 
-
-
-
-
   const requestedRange =
 
     params.range ??
 
     "30d";
-
-
-
-
 
   const range:
 
@@ -656,10 +588,6 @@ const params =
 
       : "30d";
 
-
-
-
-
   const startDate =
 
     getRangeStart(
@@ -668,9 +596,29 @@ const params =
 
     );
 
+  const previousStartDate =
+    startDate
+      ? getPreviousRangeStart(
+          range,
+          startDate
+        )
+      : null;
 
+  const previousRangeLabel =
+    getPreviousRangeLabel(
+      range
+    );
 
-
+  const previousClickWhere =
+    startDate &&
+    previousStartDate
+      ? {
+          createdAt: {
+            gte: previousStartDate,
+            lt: startDate,
+          },
+        }
+      : null;
 
   const clickWhere =
 
@@ -690,15 +638,9 @@ const params =
 
       : {};
 
-
-
-
-
   const [
 
     totalClicks,
-
-
 
     providerGroups,
 
@@ -708,8 +650,6 @@ const params =
 
     referrerGroups,
 
-
-
     utmSourceGroups,
 
     utmMediumGroups,
@@ -718,11 +658,7 @@ const params =
 
     campaignGroups,
 
-
-
     recentClicks,
-
-
 
     desktopClicks,
 
@@ -730,27 +666,31 @@ const params =
 
     tabletClicks,
 
-
-
     editorialClicks,
 
     nonEditorialClicks,
 
-
-
     trendClicks,
 
+    previousTotalClicks,
+
+    previousDesktopClicks,
+
+    previousMobileClicks,
+
+    previousTabletClicks,
+
+    previousEditorialClicks,
+
+    previousNonEditorialClicks,
+
   ] = await Promise.all([
-
-
 
     /*
 
      * Total clicks
 
      */
-
-
 
     prisma.affiliateClick.count({
 
@@ -760,17 +700,11 @@ const params =
 
     }),
 
-
-
-
-
     /*
 
      * Providers
 
      */
-
-
 
     prisma.affiliateClick.groupBy({
 
@@ -780,13 +714,9 @@ const params =
 
       ],
 
-
-
       where: {
 
         ...clickWhere,
-
-
 
         providerId: {
 
@@ -796,15 +726,11 @@ const params =
 
       },
 
-
-
       _count: {
 
         _all: true,
 
       },
-
-
 
       orderBy: {
 
@@ -818,23 +744,15 @@ const params =
 
       },
 
-
-
       take: 10,
 
     }),
-
-
-
-
 
     /*
 
      * Products
 
      */
-
-
 
     prisma.affiliateClick.groupBy({
 
@@ -844,13 +762,9 @@ const params =
 
       ],
 
-
-
       where: {
 
         ...clickWhere,
-
-
 
         productId: {
 
@@ -860,15 +774,11 @@ const params =
 
       },
 
-
-
       _count: {
 
         _all: true,
 
       },
-
-
 
       orderBy: {
 
@@ -882,23 +792,15 @@ const params =
 
       },
 
-
-
       take: 10,
 
     }),
-
-
-
-
 
     /*
 
      * Articles
 
      */
-
-
 
     prisma.affiliateClick.groupBy({
 
@@ -908,13 +810,9 @@ const params =
 
       ],
 
-
-
       where: {
 
         ...clickWhere,
-
-
 
         articleId: {
 
@@ -924,15 +822,11 @@ const params =
 
       },
 
-
-
       _count: {
 
         _all: true,
 
       },
-
-
 
       orderBy: {
 
@@ -946,23 +840,15 @@ const params =
 
       },
 
-
-
       take: 10,
 
     }),
-
-
-
-
 
     /*
 
      * Referrers
 
      */
-
-
 
     prisma.affiliateClick.groupBy({
 
@@ -972,21 +858,15 @@ const params =
 
       ],
 
-
-
       where:
 
         clickWhere,
-
-
 
       _count: {
 
         _all: true,
 
       },
-
-
 
       orderBy: {
 
@@ -1000,23 +880,15 @@ const params =
 
       },
 
-
-
       take: 10,
 
     }),
-
-
-
-
 
     /*
 
      * UTM sources
 
      */
-
-
 
     prisma.affiliateClick.groupBy({
 
@@ -1026,13 +898,9 @@ const params =
 
       ],
 
-
-
       where: {
 
         ...clickWhere,
-
-
 
         utmSource: {
 
@@ -1042,15 +910,11 @@ const params =
 
       },
 
-
-
       _count: {
 
         _all: true,
 
       },
-
-
 
       orderBy: {
 
@@ -1064,23 +928,15 @@ const params =
 
       },
 
-
-
       take: 10,
 
     }),
-
-
-
-
 
     /*
 
      * UTM mediums
 
      */
-
-
 
     prisma.affiliateClick.groupBy({
 
@@ -1090,13 +946,9 @@ const params =
 
       ],
 
-
-
       where: {
 
         ...clickWhere,
-
-
 
         utmMedium: {
 
@@ -1106,15 +958,11 @@ const params =
 
       },
 
-
-
       _count: {
 
         _all: true,
 
       },
-
-
 
       orderBy: {
 
@@ -1128,23 +976,15 @@ const params =
 
       },
 
-
-
       take: 10,
 
     }),
-
-
-
-
 
     /*
 
      * UTM campaigns
 
      */
-
-
 
     prisma.affiliateClick.groupBy({
 
@@ -1154,13 +994,9 @@ const params =
 
       ],
 
-
-
       where: {
 
         ...clickWhere,
-
-
 
         utmCampaign: {
 
@@ -1170,15 +1006,11 @@ const params =
 
       },
 
-
-
       _count: {
 
         _all: true,
 
       },
-
-
 
       orderBy: {
 
@@ -1192,23 +1024,15 @@ const params =
 
       },
 
-
-
       take: 10,
 
     }),
-
-
-
-
 
     /*
 
      * Custom campaigns
 
      */
-
-
 
     prisma.affiliateClick.groupBy({
 
@@ -1218,13 +1042,9 @@ const params =
 
       ],
 
-
-
       where: {
 
         ...clickWhere,
-
-
 
         campaign: {
 
@@ -1234,15 +1054,11 @@ const params =
 
       },
 
-
-
       _count: {
 
         _all: true,
 
       },
-
-
 
       orderBy: {
 
@@ -1256,15 +1072,9 @@ const params =
 
       },
 
-
-
       take: 10,
 
     }),
-
-
-
-
 
     /*
 
@@ -1272,15 +1082,11 @@ const params =
 
      */
 
-
-
     prisma.affiliateClick.findMany({
 
       where:
 
         clickWhere,
-
-
 
       orderBy: {
 
@@ -1290,11 +1096,7 @@ const params =
 
       },
 
-
-
       take: 25,
-
-
 
       include: {
 
@@ -1312,8 +1114,6 @@ const params =
 
         },
 
-
-
         provider: {
 
           select: {
@@ -1327,8 +1127,6 @@ const params =
           },
 
         },
-
-
 
         article: {
 
@@ -1348,25 +1146,17 @@ const params =
 
     }),
 
-
-
-
-
     /*
 
      * Device counts
 
      */
 
-
-
     prisma.affiliateClick.count({
 
       where: {
 
         ...clickWhere,
-
-
 
         deviceType:
 
@@ -1376,17 +1166,11 @@ const params =
 
     }),
 
-
-
-
-
     prisma.affiliateClick.count({
 
       where: {
 
         ...clickWhere,
-
-
 
         deviceType:
 
@@ -1396,17 +1180,11 @@ const params =
 
     }),
 
-
-
-
-
     prisma.affiliateClick.count({
 
       where: {
 
         ...clickWhere,
-
-
 
         deviceType:
 
@@ -1416,25 +1194,17 @@ const params =
 
     }),
 
-
-
-
-
     /*
 
      * Editorial attribution
 
      */
 
-
-
     prisma.affiliateClick.count({
 
       where: {
 
         ...clickWhere,
-
-
 
         articleId: {
 
@@ -1446,25 +1216,17 @@ const params =
 
     }),
 
-
-
-
-
     /*
 
      * Product/direct attribution
 
      */
 
-
-
     prisma.affiliateClick.count({
 
       where: {
 
         ...clickWhere,
-
-
 
         articleId:
 
@@ -1474,25 +1236,17 @@ const params =
 
     }),
 
-
-
-
-
     /*
 
      * Trend dates
 
      */
 
-
-
     prisma.affiliateClick.findMany({
 
       where:
 
         clickWhere,
-
-
 
       select: {
 
@@ -1501,8 +1255,6 @@ const params =
           true,
 
       },
-
-
 
       orderBy: {
 
@@ -1514,21 +1266,102 @@ const params =
 
     }),
 
+    previousClickWhere
+      ? prisma.affiliateClick.count({
+          where: previousClickWhere,
+        })
+      : Promise.resolve(null),
 
+    previousClickWhere
+      ? prisma.affiliateClick.count({
+          where: {
+            ...previousClickWhere,
+            deviceType: "desktop",
+          },
+        })
+      : Promise.resolve(null),
+
+    previousClickWhere
+      ? prisma.affiliateClick.count({
+          where: {
+            ...previousClickWhere,
+            deviceType: "mobile",
+          },
+        })
+      : Promise.resolve(null),
+
+    previousClickWhere
+      ? prisma.affiliateClick.count({
+          where: {
+            ...previousClickWhere,
+            deviceType: "tablet",
+          },
+        })
+      : Promise.resolve(null),
+
+    previousClickWhere
+      ? prisma.affiliateClick.count({
+          where: {
+            ...previousClickWhere,
+            articleId: {
+              not: null,
+            },
+          },
+        })
+      : Promise.resolve(null),
+
+    previousClickWhere
+      ? prisma.affiliateClick.count({
+          where: {
+            ...previousClickWhere,
+            articleId: null,
+          },
+        })
+      : Promise.resolve(null),
 
   ]);
 
+  const totalClicksComparison =
+    getComparison(
+      totalClicks,
+      previousTotalClicks
+    );
 
+  const desktopComparison =
+    getComparison(
+      desktopClicks,
+      previousDesktopClicks
+    );
 
+  const mobileComparison =
+    getComparison(
+      mobileClicks,
+      previousMobileClicks
+    );
 
+  const tabletComparison =
+    getComparison(
+      tabletClicks,
+      previousTabletClicks
+    );
+
+  const editorialComparison =
+    getComparison(
+      editorialClicks,
+      previousEditorialClicks
+    );
+
+  const nonEditorialComparison =
+    getComparison(
+      nonEditorialClicks,
+      previousNonEditorialClicks
+    );
 
   /*
 
    * Load referenced providers.
 
    */
-
-
 
   const providerIds =
 
@@ -1554,17 +1387,11 @@ const params =
 
       );
 
-
-
-
-
   /*
 
    * Load referenced products.
 
    */
-
-
 
   const productIds =
 
@@ -1590,17 +1417,11 @@ const params =
 
       );
 
-
-
-
-
   /*
 
    * Load referenced articles.
 
    */
-
-
 
   const articleIds =
 
@@ -1626,10 +1447,6 @@ const params =
 
       );
 
-
-
-
-
   const [
 
     providers,
@@ -1639,8 +1456,6 @@ const params =
     articles,
 
   ] = await Promise.all([
-
-
 
     providerIds.length > 0
 
@@ -1658,8 +1473,6 @@ const params =
 
           },
 
-
-
           select: {
 
             id: true,
@@ -1677,10 +1490,6 @@ const params =
           []
 
         ),
-
-
-
-
 
     productIds.length > 0
 
@@ -1698,8 +1507,6 @@ const params =
 
           },
 
-
-
           select: {
 
             id: true,
@@ -1718,10 +1525,6 @@ const params =
 
         ),
 
-
-
-
-
     articleIds.length > 0
 
       ? prisma.article.findMany({
@@ -1737,8 +1540,6 @@ const params =
             },
 
           },
-
-
 
           select: {
 
@@ -1758,13 +1559,7 @@ const params =
 
         ),
 
-
-
   ]);
-
-
-
-
 
   const providerMap =
 
@@ -1784,10 +1579,6 @@ const params =
 
     );
 
-
-
-
-
   const productMap =
 
     new Map(
@@ -1805,10 +1596,6 @@ const params =
       )
 
     );
-
-
-
-
 
   const articleMap =
 
@@ -1828,17 +1615,11 @@ const params =
 
     );
 
-
-
-
-
   /*
 
    * Click trend.
 
    */
-
-
 
   const dailyTrend =
 
@@ -1852,23 +1633,15 @@ const params =
 
       ),
 
-
-
       startDate
 
     );
-
-
-
-
 
   const maxDailyClicks =
 
     Math.max(
 
       1,
-
-
 
       ...dailyTrend.map(
 
@@ -1880,10 +1653,6 @@ const params =
 
     );
 
-
-
-
-
   const averageDailyClicks =
 
     dailyTrend.length > 0
@@ -1893,10 +1662,6 @@ const params =
         dailyTrend.length
 
       : 0;
-
-
-
-
 
   const peakDay =
 
@@ -1924,17 +1689,11 @@ const params =
 
       : null;
 
-
-
-
-
   /*
 
    * Range navigation.
 
    */
-
-
 
   const ranges: {
 
@@ -1950,15 +1709,11 @@ const params =
 
         "today",
 
-
-
       label:
 
         "Today",
 
     },
-
-
 
     {
 
@@ -1966,15 +1721,11 @@ const params =
 
         "7d",
 
-
-
       label:
 
         "Last 7 days",
 
     },
-
-
 
     {
 
@@ -1982,23 +1733,17 @@ const params =
 
         "30d",
 
-
-
       label:
 
         "Last 30 days",
 
     },
 
-
-
     {
 
       key:
 
         "all",
-
-
 
       label:
 
@@ -2008,31 +1753,17 @@ const params =
 
   ];
 
-
-
-
-
   return (
 
     <main className="min-h-screen bg-[#efeee9] py-10">
 
-
-
       <div className="container-shell">
-
-
 
         {/* Header */}
 
-
-
         <div className="flex flex-wrap items-end justify-between gap-4">
 
-
-
           <div>
-
-
 
             <p className="admin-eyebrow">
 
@@ -2040,19 +1771,11 @@ const params =
 
             </p>
 
-
-
-
-
             <h1 className="display-serif mt-2 text-5xl">
 
               Affiliate analytics
 
             </h1>
-
-
-
-
 
             <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">
 
@@ -2068,17 +1791,9 @@ const params =
 
             </p>
 
-
-
           </div>
 
-
-
-
-
           <div className="flex flex-wrap gap-2">
-
-
 
             <Link
 
@@ -2092,10 +1807,6 @@ const params =
 
             </Link>
 
-
-
-
-
             <Link
 
               href="/admin/providers"
@@ -2107,10 +1818,6 @@ const params =
               Providers
 
             </Link>
-
-
-
-
 
             <Link
 
@@ -2124,33 +1831,17 @@ const params =
 
             </Link>
 
-
-
           </div>
-
-
 
         </div>
 
-
-
-
-
         {/* Reporting range */}
-
-
 
         <section className="mt-8 rounded-2xl border border-[var(--line)] bg-white p-4">
 
-
-
           <div className="flex flex-wrap items-center justify-between gap-4">
 
-
-
             <div>
-
-
 
               <p className="admin-eyebrow">
 
@@ -2158,17 +1849,9 @@ const params =
 
               </p>
 
-
-
-
-
               <p className="mt-1 text-sm text-[var(--muted)]">
 
-
-
                 Showing analytics for{" "}
-
-
 
                 <span className="font-medium text-[var(--ink)]">
 
@@ -2184,27 +1867,21 @@ const params =
 
                 </span>
 
-
-
               </p>
 
-
+              {previousRangeLabel && (
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  Compared with {previousRangeLabel}.
+                </p>
+              )}
 
             </div>
 
-
-
-
-
             <div className="flex flex-wrap gap-2">
-
-
 
               {ranges.map(
 
                 (item) => (
-
-
 
                   <Link
 
@@ -2238,39 +1915,21 @@ const params =
 
                   </Link>
 
-
-
                 )
 
               )}
 
-
-
             </div>
-
-
 
           </div>
 
-
-
         </section>
-
-
-
-
 
         {/* Main KPI cards */}
 
-
-
         <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -2278,27 +1937,21 @@ const params =
 
             </p>
 
-
-
-
-
             <p className="mt-4 text-4xl font-semibold tracking-tight">
 
               {totalClicks}
 
             </p>
 
-
+            {previousRangeLabel && (
+              <p className={`mt-3 text-xs font-semibold ${totalClicksComparison.className}`}>
+                {totalClicksComparison.label} vs {previousRangeLabel}
+              </p>
+            )}
 
           </div>
 
-
-
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -2306,27 +1959,21 @@ const params =
 
             </p>
 
-
-
-
-
             <p className="mt-4 text-4xl font-semibold tracking-tight">
 
               {desktopClicks}
 
             </p>
 
-
+            {previousRangeLabel && (
+              <p className={`mt-3 text-xs font-semibold ${desktopComparison.className}`}>
+                {desktopComparison.label} vs {previousRangeLabel}
+              </p>
+            )}
 
           </div>
 
-
-
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -2334,27 +1981,21 @@ const params =
 
             </p>
 
-
-
-
-
             <p className="mt-4 text-4xl font-semibold tracking-tight">
 
               {mobileClicks}
 
             </p>
 
-
+            {previousRangeLabel && (
+              <p className={`mt-3 text-xs font-semibold ${mobileComparison.className}`}>
+                {mobileComparison.label} vs {previousRangeLabel}
+              </p>
+            )}
 
           </div>
 
-
-
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -2362,39 +2003,27 @@ const params =
 
             </p>
 
-
-
-
-
             <p className="mt-4 text-4xl font-semibold tracking-tight">
 
               {tabletClicks}
 
             </p>
 
-
+            {previousRangeLabel && (
+              <p className={`mt-3 text-xs font-semibold ${tabletComparison.className}`}>
+                {tabletComparison.label} vs {previousRangeLabel}
+              </p>
+            )}
 
           </div>
 
-
-
         </section>
-
-
-
-
 
         {/* Attribution KPI */}
 
-
-
         <section className="mt-4 grid gap-4 md:grid-cols-2">
 
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -2402,17 +2031,9 @@ const params =
 
             </p>
 
-
-
-
-
             <div className="mt-4 flex items-end justify-between gap-6">
 
-
-
               <div>
-
-
 
                 <p className="text-4xl font-semibold tracking-tight">
 
@@ -2424,23 +2045,13 @@ const params =
 
                 </p>
 
-
-
-
-
                 <p className="mt-2 text-sm text-[var(--muted)]">
 
                   Clicks attributed to articles
 
                 </p>
 
-
-
               </div>
-
-
-
-
 
               <p className="text-2xl font-semibold">
 
@@ -2460,21 +2071,11 @@ const params =
 
               </p>
 
-
-
             </div>
-
-
 
           </div>
 
-
-
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -2482,17 +2083,9 @@ const params =
 
             </p>
 
-
-
-
-
             <div className="mt-4 flex items-end justify-between gap-6">
 
-
-
               <div>
-
-
 
                 <p className="text-4xl font-semibold tracking-tight">
 
@@ -2504,23 +2097,13 @@ const params =
 
                 </p>
 
-
-
-
-
                 <p className="mt-2 text-sm text-[var(--muted)]">
 
                   Clicks without article attribution
 
                 </p>
 
-
-
               </div>
-
-
-
-
 
               <p className="text-2xl font-semibold">
 
@@ -2540,37 +2123,83 @@ const params =
 
               </p>
 
-
-
             </div>
-
-
 
           </div>
 
-
-
         </section>
 
+        {previousRangeLabel && (
+          <section className="mt-4 rounded-2xl border border-[var(--line)] bg-white p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="admin-eyebrow">
+                  Period comparison
+                </p>
 
+                <h2 className="display-serif mt-2 text-3xl">
+                  Current vs previous period
+                </h2>
 
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  Directional click changes compared with {previousRangeLabel}.
+                </p>
+              </div>
 
+              <p className="text-xs text-[var(--muted)]">
+                Positive change indicates more outbound clicks, not confirmed sales or revenue.
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {[
+                ["Total clicks", totalClicks, previousTotalClicks, totalClicksComparison],
+                ["Editorial", editorialClicks, previousEditorialClicks, editorialComparison],
+                ["Product / direct", nonEditorialClicks, previousNonEditorialClicks, nonEditorialComparison],
+                ["Desktop", desktopClicks, previousDesktopClicks, desktopComparison],
+                ["Mobile", mobileClicks, previousMobileClicks, mobileComparison],
+                ["Tablet", tabletClicks, previousTabletClicks, tabletComparison],
+              ].map(([label, current, previous, comparison]) => {
+                const result = comparison as ComparisonResult;
+
+                return (
+                  <div
+                    key={String(label)}
+                    className="rounded-xl border border-[var(--line)] bg-[var(--paper)] p-4"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                      {String(label)}
+                    </p>
+
+                    <div className="mt-3 flex items-end justify-between gap-4">
+                      <div>
+                        <p className="text-2xl font-semibold">
+                          {Number(current)}
+                        </p>
+
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          Previous: {previous === null ? "—" : Number(previous)}
+                        </p>
+                      </div>
+
+                      <p className={`text-sm font-semibold ${result.className}`}>
+                        {result.label}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Click trend */}
 
-
-
         <section className="mt-8 rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
           <div className="flex flex-wrap items-start justify-between gap-6">
 
-
-
             <div>
-
-
 
               <p className="admin-eyebrow">
 
@@ -2578,19 +2207,11 @@ const params =
 
               </p>
 
-
-
-
-
               <h2 className="display-serif mt-2 text-3xl">
 
                 Outbound clicks over time
 
               </h2>
-
-
-
-
 
               <p className="mt-2 text-sm text-[var(--muted)]">
 
@@ -2608,31 +2229,17 @@ const params =
 
               </p>
 
-
-
             </div>
-
-
-
-
 
             <div className="flex flex-wrap gap-8">
 
-
-
               <div>
-
-
 
                 <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
 
                   Daily average
 
                 </p>
-
-
-
-
 
                 <p className="mt-1 text-xl font-semibold">
 
@@ -2648,27 +2255,15 @@ const params =
 
                 </p>
 
-
-
               </div>
 
-
-
-
-
               <div>
-
-
 
                 <p className="text-xs uppercase tracking-wider text-[var(--muted)]">
 
                   Peak day
 
                 </p>
-
-
-
-
 
                 <p className="mt-1 text-xl font-semibold">
 
@@ -2682,13 +2277,7 @@ const params =
 
                 </p>
 
-
-
-
-
                 {peakDay && (
-
-
 
                   <p className="text-xs text-[var(--muted)]">
 
@@ -2700,39 +2289,21 @@ const params =
 
                   </p>
 
-
-
                 )}
-
-
 
               </div>
 
-
-
             </div>
 
-
-
           </div>
-
-
-
-
 
           {dailyTrend.length >
 
           0 ? (
 
-
-
             <div className="mt-8 overflow-x-auto">
 
-
-
               <div className="flex h-72 min-w-max items-end gap-2 border-b border-[var(--line)] px-2">
-
-
 
                 {dailyTrend.map(
 
@@ -2744,8 +2315,6 @@ const params =
 
                   ) => {
 
-
-
                     const height =
 
                       item.clicks >
@@ -2755,8 +2324,6 @@ const params =
                         ? Math.max(
 
                             12,
-
-
 
                             Math.round(
 
@@ -2775,10 +2342,6 @@ const params =
                           )
 
                         : 4;
-
-
-
-
 
                     const showLabel =
 
@@ -2800,10 +2363,6 @@ const params =
 
                           0;
 
-
-
-
-
                     return (
 
                       <div
@@ -2818,11 +2377,7 @@ const params =
 
                       >
 
-
-
                         <div className="mb-2 text-xs font-semibold">
-
-
 
                           {item.clicks >
 
@@ -2832,13 +2387,7 @@ const params =
 
                             : ""}
 
-
-
                         </div>
-
-
-
-
 
                         <div
 
@@ -2856,13 +2405,7 @@ const params =
 
                         />
 
-
-
-
-
                         <div className="mt-2 h-10 text-center text-[10px] text-[var(--muted)]">
-
-
 
                           {showLabel
 
@@ -2870,11 +2413,7 @@ const params =
 
                             : ""}
 
-
-
                         </div>
-
-
 
                       </div>
 
@@ -2884,23 +2423,13 @@ const params =
 
                 )}
 
-
-
               </div>
-
-
 
             </div>
 
-
-
           ) : (
 
-
-
             <div className="mt-8 rounded-xl border border-dashed border-[var(--line)] p-10 text-center">
-
-
 
               <p className="text-sm text-[var(--muted)]">
 
@@ -2908,37 +2437,19 @@ const params =
 
               </p>
 
-
-
             </div>
-
-
 
           )}
 
-
-
         </section>
-
-
-
-
 
         {/* Provider + Product */}
 
-
-
         <section className="mt-8 grid gap-8 xl:grid-cols-2">
-
-
 
           {/* Providers */}
 
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -2946,29 +2457,17 @@ const params =
 
             </p>
 
-
-
-
-
             <h2 className="display-serif mt-2 text-3xl">
 
               Top providers
 
             </h2>
 
-
-
-
-
             <div className="mt-6 divide-y divide-[var(--line)]">
-
-
 
               {providerGroups.length >
 
               0 ? (
-
-
 
                 providerGroups.map(
 
@@ -2980,8 +2479,6 @@ const params =
 
                   ) => {
 
-
-
                     if (
 
                       !group.providerId
@@ -2992,10 +2489,6 @@ const params =
 
                     }
 
-
-
-
-
                     const provider =
 
                       providerMap.get(
@@ -3003,10 +2496,6 @@ const params =
                         group.providerId
 
                       );
-
-
-
-
 
                     return (
 
@@ -3022,8 +2511,6 @@ const params =
 
                       >
 
-
-
                         <p className="font-medium">
 
                           {index + 1}.{" "}
@@ -3037,10 +2524,6 @@ const params =
                           }
 
                         </p>
-
-
-
-
 
                         <strong>
 
@@ -3056,8 +2539,6 @@ const params =
 
                         </strong>
 
-
-
                       </div>
 
                     );
@@ -3066,11 +2547,7 @@ const params =
 
                 )
 
-
-
               ) : (
-
-
 
                 <p className="py-4 text-sm text-[var(--muted)]">
 
@@ -3078,29 +2555,15 @@ const params =
 
                 </p>
 
-
-
               )}
-
-
 
             </div>
 
-
-
           </div>
-
-
-
-
 
           {/* Products */}
 
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -3108,29 +2571,17 @@ const params =
 
             </p>
 
-
-
-
-
             <h2 className="display-serif mt-2 text-3xl">
 
               Top products
 
             </h2>
 
-
-
-
-
             <div className="mt-6 divide-y divide-[var(--line)]">
-
-
 
               {productGroups.length >
 
               0 ? (
-
-
 
                 productGroups.map(
 
@@ -3142,8 +2593,6 @@ const params =
 
                   ) => {
 
-
-
                     if (
 
                       !group.productId
@@ -3154,10 +2603,6 @@ const params =
 
                     }
 
-
-
-
-
                     const product =
 
                       productMap.get(
@@ -3165,10 +2610,6 @@ const params =
                         group.productId
 
                       );
-
-
-
-
 
                     return (
 
@@ -3184,11 +2625,7 @@ const params =
 
                       >
 
-
-
                         {product ? (
-
-
 
                           <Link
 
@@ -3210,11 +2647,7 @@ const params =
 
                           </Link>
 
-
-
                         ) : (
-
-
 
                           <p className="font-medium">
 
@@ -3222,13 +2655,7 @@ const params =
 
                           </p>
 
-
-
                         )}
-
-
-
-
 
                         <strong>
 
@@ -3244,8 +2671,6 @@ const params =
 
                         </strong>
 
-
-
                       </div>
 
                     );
@@ -3254,11 +2679,7 @@ const params =
 
                 )
 
-
-
               ) : (
-
-
 
                 <p className="py-4 text-sm text-[var(--muted)]">
 
@@ -3266,37 +2687,19 @@ const params =
 
                 </p>
 
-
-
               )}
-
-
 
             </div>
 
-
-
           </div>
-
-
 
         </section>
 
-
-
-
-
         {/* UTM Source + Medium */}
-
-
 
         <section className="mt-8 grid gap-8 xl:grid-cols-2">
 
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -3304,29 +2707,17 @@ const params =
 
             </p>
 
-
-
-
-
             <h2 className="display-serif mt-2 text-3xl">
 
               Top UTM sources
 
             </h2>
 
-
-
-
-
             <div className="mt-6 divide-y divide-[var(--line)]">
-
-
 
               {utmSourceGroups.length >
 
               0 ? (
-
-
 
                 utmSourceGroups.map(
 
@@ -3337,8 +2728,6 @@ const params =
                     index
 
                   ) => (
-
-
 
                     <div
 
@@ -3354,11 +2743,7 @@ const params =
 
                     >
 
-
-
                       <div>
-
-
 
                         <p className="font-medium">
 
@@ -3374,10 +2759,6 @@ const params =
 
                         </p>
 
-
-
-
-
                         <p className="mt-1 text-xs text-[var(--muted)]">
 
                           {
@@ -3400,13 +2781,7 @@ const params =
 
                         </p>
 
-
-
                       </div>
-
-
-
-
 
                       <strong>
 
@@ -3422,21 +2797,13 @@ const params =
 
                       </strong>
 
-
-
                     </div>
-
-
 
                   )
 
                 )
 
-
-
               ) : (
-
-
 
                 <p className="py-4 text-sm text-[var(--muted)]">
 
@@ -3444,25 +2811,13 @@ const params =
 
                 </p>
 
-
-
               )}
-
-
 
             </div>
 
-
-
           </div>
 
-
-
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -3470,29 +2825,17 @@ const params =
 
             </p>
 
-
-
-
-
             <h2 className="display-serif mt-2 text-3xl">
 
               Top UTM mediums
 
             </h2>
 
-
-
-
-
             <div className="mt-6 divide-y divide-[var(--line)]">
-
-
 
               {utmMediumGroups.length >
 
               0 ? (
-
-
 
                 utmMediumGroups.map(
 
@@ -3503,8 +2846,6 @@ const params =
                     index
 
                   ) => (
-
-
 
                     <div
 
@@ -3520,11 +2861,7 @@ const params =
 
                     >
 
-
-
                       <div>
-
-
 
                         <p className="font-medium">
 
@@ -3540,10 +2877,6 @@ const params =
 
                         </p>
 
-
-
-
-
                         <p className="mt-1 text-xs text-[var(--muted)]">
 
                           {
@@ -3566,13 +2899,7 @@ const params =
 
                         </p>
 
-
-
                       </div>
-
-
-
-
 
                       <strong>
 
@@ -3588,21 +2915,13 @@ const params =
 
                       </strong>
 
-
-
                     </div>
-
-
 
                   )
 
                 )
 
-
-
               ) : (
-
-
 
                 <p className="py-4 text-sm text-[var(--muted)]">
 
@@ -3610,37 +2929,19 @@ const params =
 
                 </p>
 
-
-
               )}
-
-
 
             </div>
 
-
-
           </div>
-
-
 
         </section>
 
-
-
-
-
         {/* Campaign analytics */}
-
-
 
         <section className="mt-8 grid gap-8 xl:grid-cols-2">
 
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -3648,29 +2949,17 @@ const params =
 
             </p>
 
-
-
-
-
             <h2 className="display-serif mt-2 text-3xl">
 
               Top UTM campaigns
 
             </h2>
 
-
-
-
-
             <div className="mt-6 divide-y divide-[var(--line)]">
-
-
 
               {utmCampaignGroups.length >
 
               0 ? (
-
-
 
                 utmCampaignGroups.map(
 
@@ -3681,8 +2970,6 @@ const params =
                     index
 
                   ) => (
-
-
 
                     <div
 
@@ -3698,11 +2985,7 @@ const params =
 
                     >
 
-
-
                       <div>
-
-
 
                         <p className="font-medium">
 
@@ -3717,10 +3000,6 @@ const params =
                           }
 
                         </p>
-
-
-
-
 
                         <p className="mt-1 text-xs text-[var(--muted)]">
 
@@ -3744,13 +3023,7 @@ const params =
 
                         </p>
 
-
-
                       </div>
-
-
-
-
 
                       <strong>
 
@@ -3766,21 +3039,13 @@ const params =
 
                       </strong>
 
-
-
                     </div>
-
-
 
                   )
 
                 )
 
-
-
               ) : (
-
-
 
                 <p className="py-4 text-sm text-[var(--muted)]">
 
@@ -3788,25 +3053,13 @@ const params =
 
                 </p>
 
-
-
               )}
-
-
 
             </div>
 
-
-
           </div>
 
-
-
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -3814,29 +3067,17 @@ const params =
 
             </p>
 
-
-
-
-
             <h2 className="display-serif mt-2 text-3xl">
 
               Custom campaigns
 
             </h2>
 
-
-
-
-
             <div className="mt-6 divide-y divide-[var(--line)]">
-
-
 
               {campaignGroups.length >
 
               0 ? (
-
-
 
                 campaignGroups.map(
 
@@ -3847,8 +3088,6 @@ const params =
                     index
 
                   ) => (
-
-
 
                     <div
 
@@ -3864,8 +3103,6 @@ const params =
 
                     >
 
-
-
                       <p className="font-medium">
 
                         {index + 1}.{" "}
@@ -3879,10 +3116,6 @@ const params =
                         }
 
                       </p>
-
-
-
-
 
                       <strong>
 
@@ -3898,35 +3131,21 @@ const params =
 
                       </strong>
 
-
-
                     </div>
-
-
 
                   )
 
                 )
 
-
-
               ) : (
 
-
-
                 <div className="py-6">
-
-
 
                   <p className="text-sm text-[var(--muted)]">
 
                     No custom campaigns recorded yet.
 
                   </p>
-
-
-
-
 
                   <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
 
@@ -3936,45 +3155,23 @@ const params =
 
                   </p>
 
-
-
                 </div>
-
-
 
               )}
 
-
-
             </div>
-
-
 
           </div>
 
-
-
         </section>
-
-
-
-
 
         {/* Editorial + Referrer attribution */}
 
-
-
         <section className="mt-8 grid gap-8 xl:grid-cols-2">
-
-
 
           {/* Articles */}
 
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -3982,29 +3179,17 @@ const params =
 
             </p>
 
-
-
-
-
             <h2 className="display-serif mt-2 text-3xl">
 
               Top articles
 
             </h2>
 
-
-
-
-
             <div className="mt-6 divide-y divide-[var(--line)]">
-
-
 
               {articleGroups.length >
 
               0 ? (
-
-
 
                 articleGroups.map(
 
@@ -4016,8 +3201,6 @@ const params =
 
                   ) => {
 
-
-
                     if (
 
                       !group.articleId
@@ -4028,10 +3211,6 @@ const params =
 
                     }
 
-
-
-
-
                     const article =
 
                       articleMap.get(
@@ -4039,10 +3218,6 @@ const params =
                         group.articleId
 
                       );
-
-
-
-
 
                     return (
 
@@ -4058,11 +3233,7 @@ const params =
 
                       >
 
-
-
                         {article ? (
-
-
 
                           <Link
 
@@ -4084,11 +3255,7 @@ const params =
 
                           </Link>
 
-
-
                         ) : (
-
-
 
                           <p className="font-medium">
 
@@ -4096,13 +3263,7 @@ const params =
 
                           </p>
 
-
-
                         )}
-
-
-
-
 
                         <strong>
 
@@ -4118,8 +3279,6 @@ const params =
 
                         </strong>
 
-
-
                       </div>
 
                     );
@@ -4128,25 +3287,15 @@ const params =
 
                 )
 
-
-
               ) : (
 
-
-
                 <div className="py-6">
-
-
 
                   <p className="text-sm text-[var(--muted)]">
 
                     No article-attributed clicks yet.
 
                   </p>
-
-
-
-
 
                   <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
 
@@ -4156,33 +3305,17 @@ const params =
 
                   </p>
 
-
-
                 </div>
-
-
 
               )}
 
-
-
             </div>
-
-
 
           </div>
 
-
-
-
-
           {/* Referrers */}
 
-
-
           <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-
-
 
             <p className="admin-eyebrow">
 
@@ -4190,29 +3323,17 @@ const params =
 
             </p>
 
-
-
-
-
             <h2 className="display-serif mt-2 text-3xl">
 
               Top referring sources
 
             </h2>
 
-
-
-
-
             <div className="mt-6 divide-y divide-[var(--line)]">
-
-
 
               {referrerGroups.length >
 
               0 ? (
-
-
 
                 referrerGroups.map(
 
@@ -4223,8 +3344,6 @@ const params =
                     index
 
                   ) => (
-
-
 
                     <div
 
@@ -4240,11 +3359,7 @@ const params =
 
                     >
 
-
-
                       <div className="min-w-0">
-
-
 
                         <p className="truncate font-medium">
 
@@ -4262,13 +3377,7 @@ const params =
 
                         </p>
 
-
-
-
-
                         {group.referrer && (
-
-
 
                           <p className="mt-1 max-w-md truncate text-xs text-[var(--muted)]">
 
@@ -4280,17 +3389,9 @@ const params =
 
                           </p>
 
-
-
                         )}
 
-
-
                       </div>
-
-
-
-
 
                       <strong>
 
@@ -4306,21 +3407,13 @@ const params =
 
                       </strong>
 
-
-
                     </div>
-
-
 
                   )
 
                 )
 
-
-
               ) : (
-
-
 
                 <p className="py-4 text-sm text-[var(--muted)]">
 
@@ -4328,41 +3421,21 @@ const params =
 
                 </p>
 
-
-
               )}
-
-
 
             </div>
 
-
-
           </div>
-
-
 
         </section>
 
-
-
-
-
         {/* Recent clicks */}
-
-
 
         <section className="mt-8 rounded-2xl border border-[var(--line)] bg-white p-6">
 
-
-
           <div className="flex flex-wrap items-end justify-between gap-3">
 
-
-
             <div>
-
-
 
               <p className="admin-eyebrow">
 
@@ -4370,23 +3443,13 @@ const params =
 
               </p>
 
-
-
-
-
               <h2 className="display-serif mt-2 text-3xl">
 
                 Recent outbound clicks
 
               </h2>
 
-
-
             </div>
-
-
-
-
 
             <p className="text-xs text-[var(--muted)]">
 
@@ -4402,35 +3465,19 @@ const params =
 
             </p>
 
-
-
           </div>
-
-
-
-
 
           {recentClicks.length >
 
           0 ? (
 
-
-
             <div className="mt-6 overflow-x-auto">
-
-
 
               <table className="min-w-full text-left">
 
-
-
                 <thead>
 
-
-
                   <tr className="border-b border-[var(--line)] text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-
-
 
                     <th className="px-3 py-3">
 
@@ -4438,15 +3485,11 @@ const params =
 
                     </th>
 
-
-
                     <th className="px-3 py-3">
 
                       Product
 
                     </th>
-
-
 
                     <th className="px-3 py-3">
 
@@ -4454,15 +3497,11 @@ const params =
 
                     </th>
 
-
-
                     <th className="px-3 py-3">
 
                       Article
 
                     </th>
-
-
 
                     <th className="px-3 py-3">
 
@@ -4470,15 +3509,11 @@ const params =
 
                     </th>
 
-
-
                     <th className="px-3 py-3">
 
                       Medium
 
                     </th>
-
-
 
                     <th className="px-3 py-3">
 
@@ -4486,35 +3521,21 @@ const params =
 
                     </th>
 
-
-
                     <th className="px-3 py-3">
 
                       Device
 
                     </th>
 
-
-
                   </tr>
-
-
 
                 </thead>
 
-
-
-
-
                 <tbody>
-
-
 
                   {recentClicks.map(
 
                     (click) => (
-
-
 
                       <tr
 
@@ -4528,8 +3549,6 @@ const params =
 
                       >
 
-
-
                         <td className="whitespace-nowrap px-3 py-4 text-xs text-[var(--muted)]">
 
                           {
@@ -4540,17 +3559,9 @@ const params =
 
                         </td>
 
-
-
-
-
                         <td className="px-3 py-4">
 
-
-
                           {click.product ? (
-
-
 
                             <Link
 
@@ -4572,21 +3583,13 @@ const params =
 
                             </Link>
 
-
-
                           ) : (
 
-                            "â€”"
+                            "—"
 
                           )}
 
-
-
                         </td>
-
-
-
-
 
                         <td className="px-3 py-4">
 
@@ -4596,23 +3599,15 @@ const params =
 
                               ?.name ??
 
-                            "â€”"
+                            "—"
 
                           }
 
                         </td>
 
-
-
-
-
                         <td className="max-w-xs px-3 py-4">
 
-
-
                           {click.article ? (
-
-
 
                             <Link
 
@@ -4634,21 +3629,13 @@ const params =
 
                             </Link>
 
-
-
                           ) : (
 
-                            "â€”"
+                            "—"
 
                           )}
 
-
-
                         </td>
-
-
-
-
 
                         <td className="px-3 py-4 text-xs">
 
@@ -4656,15 +3643,11 @@ const params =
 
                             click.utmSource ??
 
-                            "â€”"
+                            "—"
 
                           }
 
                         </td>
-
-
-
-
 
                         <td className="px-3 py-4 text-xs">
 
@@ -4672,15 +3655,11 @@ const params =
 
                             click.utmMedium ??
 
-                            "â€”"
+                            "—"
 
                           }
 
                         </td>
-
-
-
-
 
                         <td className="px-3 py-4 text-xs">
 
@@ -4690,15 +3669,11 @@ const params =
 
                             click.campaign ??
 
-                            "â€”"
+                            "—"
 
                           }
 
                         </td>
-
-
-
-
 
                         <td className="px-3 py-4 capitalize">
 
@@ -4712,37 +3687,21 @@ const params =
 
                         </td>
 
-
-
                       </tr>
-
-
 
                     )
 
                   )}
 
-
-
                 </tbody>
-
-
 
               </table>
 
-
-
             </div>
-
-
 
           ) : (
 
-
-
             <div className="mt-8 rounded-xl border border-dashed border-[var(--line)] p-8 text-center">
-
-
 
               <p className="text-sm text-[var(--muted)]">
 
@@ -4750,23 +3709,13 @@ const params =
 
               </p>
 
-
-
             </div>
-
-
 
           )}
 
-
-
         </section>
 
-
-
       </div>
-
-
 
     </main>
 

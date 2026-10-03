@@ -1,9 +1,21 @@
-﻿import { notFound } from "next/navigation";
-import Link from "next/link";
+﻿import Link from "next/link";
+import { notFound } from "next/navigation";
 
-import { EditArticleEditor } from "@/components/admin/EditArticleEditor";
-import { requirePageRole } from "@/lib/auth/require-admin";
-import { prisma } from "@/lib/db/prisma";
+import {
+  ContentStatus,
+} from "@prisma/client";
+
+import {
+  EditArticleEditor,
+} from "@/components/admin/EditArticleEditor";
+
+import {
+  requirePageRole,
+} from "@/lib/auth/require-admin";
+
+import {
+  prisma,
+} from "@/lib/db/prisma";
 
 
 const textBlockTypes = [
@@ -47,6 +59,72 @@ export const dynamic =
   "force-dynamic";
 
 
+function formatDateTime(
+  value:
+    | Date
+    | null
+    | undefined
+) {
+  if (!value) {
+    return "—";
+  }
+
+
+  return new Intl.DateTimeFormat(
+    "en-US",
+    {
+      dateStyle:
+        "medium",
+
+      timeStyle:
+        "short",
+    }
+  ).format(
+    value
+  );
+}
+
+
+function getStatusLabel(
+  status: ContentStatus
+) {
+  switch (status) {
+    case ContentStatus.PUBLISHED:
+      return "Published";
+
+    case ContentStatus.SCHEDULED:
+      return "Scheduled";
+
+    case ContentStatus.ARCHIVED:
+      return "Archived";
+
+    case ContentStatus.DRAFT:
+    default:
+      return "Draft";
+  }
+}
+
+
+function getStatusClasses(
+  status: ContentStatus
+) {
+  switch (status) {
+    case ContentStatus.PUBLISHED:
+      return "border-emerald-300 bg-emerald-50 text-emerald-800";
+
+    case ContentStatus.SCHEDULED:
+      return "border-blue-300 bg-blue-50 text-blue-800";
+
+    case ContentStatus.ARCHIVED:
+      return "border-slate-300 bg-slate-100 text-slate-700";
+
+    case ContentStatus.DRAFT:
+    default:
+      return "border-amber-300 bg-amber-50 text-amber-800";
+  }
+}
+
+
 export default async function EditArticlePage({
   params,
 }: {
@@ -62,8 +140,9 @@ export default async function EditArticlePage({
     ]);
 
 
-  const { id } =
-    await params;
+  const {
+    id,
+  } = await params;
 
 
   const isAuthor =
@@ -100,7 +179,8 @@ export default async function EditArticlePage({
       where: {
         id,
 
-        ...(isAuthor && ownAuthor
+        ...(isAuthor &&
+        ownAuthor
           ? {
               authorId:
                 ownAuthor.id,
@@ -117,6 +197,20 @@ export default async function EditArticlePage({
         },
 
         seo: true,
+
+        author: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -131,7 +225,6 @@ export default async function EditArticlePage({
     authors,
     products,
   ] = await Promise.all([
-
     prisma.category.findMany({
       orderBy: {
         sortOrder:
@@ -202,17 +295,17 @@ export default async function EditArticlePage({
         },
       },
     }),
-
   ]);
 
 
   const blocks =
-    article.blocks.reduce<EditorBlock[]>(
+    article.blocks.reduce<
+      EditorBlock[]
+    >(
       (
         result,
         block
       ) => {
-
         const data =
           block.data as {
             text?: unknown;
@@ -305,96 +398,309 @@ export default async function EditArticlePage({
     );
 
 
+  const productBlockCount =
+    blocks.filter(
+      (block) =>
+        block.type ===
+          "PRODUCT" ||
+        block.type ===
+          "PRODUCT_GRID"
+    ).length;
+
+
+  const publicArticleHref =
+    `/articles/${article.slug}`;
+
+
   return (
     <main className="min-h-screen bg-[#efeee9] py-10">
 
       <div className="container-shell">
 
-        <Link
-          href="/admin/articles"
-          className="admin-link"
-        >
-          â† Articles
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+
+          <Link
+            href="/admin/articles"
+            className="admin-link"
+          >
+            ← Articles
+          </Link>
 
 
-        <div className="mb-8 mt-4">
-
-          <p className="admin-eyebrow">
-            Content / Edit article
-          </p>
-
-
-          <h1 className="display-serif text-5xl">
-            Edit story
-          </h1>
-
-
-          {isAuthor && ownAuthor && (
-            <p className="mt-4 text-sm text-[var(--muted)]">
-              Editing as{" "}
-              <span className="font-medium text-[var(--ink)]">
-                {ownAuthor.name}
-              </span>
-            </p>
+          {article.status ===
+            ContentStatus.PUBLISHED && (
+            <Link
+              href={
+                publicArticleHref
+              }
+              target="_blank"
+              rel="noreferrer"
+              className="admin-secondary"
+            >
+              View published article
+            </Link>
           )}
 
         </div>
 
 
-        <EditArticleEditor
-          article={{
-            id:
-              article.id,
+        <header className="mt-6 flex flex-wrap items-start justify-between gap-6">
 
-            title:
-              article.title,
+          <div className="max-w-3xl">
 
-            slug:
-              article.slug,
+            <p className="admin-eyebrow">
+              Content / Edit article
+            </p>
 
-            subtitle:
-              article.subtitle,
 
-            excerpt:
-              article.excerpt,
+            <h1 className="display-serif mt-2 text-5xl">
+              Edit story
+            </h1>
 
-            featuredImage:
-              article.featuredImage,
 
-            categoryId:
-              article.categoryId,
+            <p className="mt-4 text-xl font-medium">
+              {article.title}
+            </p>
 
-            authorId:
-              article.authorId,
 
-            status:
-              article.status,
+            <div className="mt-4 flex flex-wrap items-center gap-3">
 
-            seoTitle:
-              article.seo?.title ??
-              "",
+              <span
+                className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${getStatusClasses(
+                  article.status
+                )}`}
+              >
+                {getStatusLabel(
+                  article.status
+                )}
+              </span>
 
-            seoDescription:
-              article.seo
-                ?.description ??
-              "",
 
-            blocks,
-          }}
+              <span className="text-sm text-[var(--muted)]">
+                {article.category.name}
+              </span>
 
-          categories={
-            categories
-          }
 
-          authors={
-            authors
-          }
+              <span className="text-sm text-[var(--muted)]">
+                by{" "}
+                {article.author.name}
+              </span>
 
-          products={
-            products
-          }
-        />
+            </div>
+
+
+            {isAuthor &&
+              ownAuthor && (
+              <p className="mt-4 text-sm text-[var(--muted)]">
+                Editing as{" "}
+                <span className="font-medium text-[var(--ink)]">
+                  {ownAuthor.name}
+                </span>
+              </p>
+            )}
+
+          </div>
+
+        </header>
+
+
+        <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+
+            <p className="admin-eyebrow">
+              Status
+            </p>
+
+
+            <p className="mt-3 font-semibold">
+              {getStatusLabel(
+                article.status
+              )}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+
+            <p className="admin-eyebrow">
+              Updated
+            </p>
+
+
+            <p className="mt-3 text-sm font-medium">
+              {formatDateTime(
+                article.updatedAt
+              )}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+
+            <p className="admin-eyebrow">
+              Published
+            </p>
+
+
+            <p className="mt-3 text-sm font-medium">
+              {formatDateTime(
+                article.publishedAt
+              )}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+
+            <p className="admin-eyebrow">
+              Content blocks
+            </p>
+
+
+            <p className="mt-3 text-2xl font-semibold">
+              {blocks.length}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+
+            <p className="admin-eyebrow">
+              Product blocks
+            </p>
+
+
+            <p className="mt-3 text-2xl font-semibold">
+              {productBlockCount}
+            </p>
+
+          </div>
+
+        </section>
+
+
+        {article.status ===
+          ContentStatus.DRAFT && (
+          <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-5">
+
+            <p className="font-semibold">
+              Draft article
+            </p>
+
+
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              This story is not publicly
+              visible yet. Review the
+              content, products, SEO, and
+              publishing status before
+              publishing.
+            </p>
+
+          </div>
+        )}
+
+
+        {article.status ===
+          ContentStatus.SCHEDULED && (
+          <div className="mt-6 rounded-2xl border border-blue-300 bg-blue-50 p-5">
+
+            <p className="font-semibold">
+              Scheduled article
+            </p>
+
+
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              This story is scheduled for
+              publication. Review any
+              editorial changes carefully
+              before saving.
+            </p>
+
+          </div>
+        )}
+
+
+        {article.status ===
+          ContentStatus.ARCHIVED && (
+          <div className="mt-6 rounded-2xl border border-slate-300 bg-slate-100 p-5">
+
+            <p className="font-semibold">
+              Archived article
+            </p>
+
+
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              This story is archived and
+              should be treated as
+              inactive editorial content.
+            </p>
+
+          </div>
+        )}
+
+
+        <section className="mt-8">
+
+          <EditArticleEditor
+            article={{
+              id:
+                article.id,
+
+              title:
+                article.title,
+
+              slug:
+                article.slug,
+
+              subtitle:
+                article.subtitle,
+
+              excerpt:
+                article.excerpt,
+
+              featuredImage:
+                article.featuredImage,
+
+              categoryId:
+                article.categoryId,
+
+              authorId:
+                article.authorId,
+
+              status:
+                article.status,
+
+              seoTitle:
+                article.seo?.title ??
+                "",
+
+              seoDescription:
+                article.seo
+                  ?.description ??
+                "",
+
+              blocks,
+            }}
+
+            categories={
+              categories
+            }
+
+            authors={
+              authors
+            }
+
+            products={
+              products
+            }
+          />
+
+        </section>
 
       </div>
 

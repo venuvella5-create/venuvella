@@ -17,6 +17,127 @@ export const dynamic =
   "force-dynamic";
 
 
+function getRoleLabel(
+  role:
+    | "ADMIN"
+    | "EDITOR"
+    | "AUTHOR"
+    | "ANALYST"
+) {
+  switch (role) {
+    case "ADMIN":
+      return "Administrator";
+
+    case "EDITOR":
+      return "Editor";
+
+    case "AUTHOR":
+      return "Author";
+
+    case "ANALYST":
+      return "Analyst";
+
+    default:
+      return role;
+  }
+}
+
+
+function formatDateTime(
+  value: Date
+) {
+  return new Intl.DateTimeFormat(
+    "en-US",
+    {
+      dateStyle:
+        "medium",
+
+      timeStyle:
+        "short",
+    }
+  ).format(
+    value
+  );
+}
+
+
+function DashboardCard({
+  href,
+  eyebrow,
+  title,
+  description,
+  value,
+}: {
+  href?: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  value?: number | null;
+}) {
+  const content = (
+    <>
+      <div className="flex items-start justify-between gap-4">
+
+        <div>
+
+          <p className="admin-eyebrow">
+            {eyebrow}
+          </p>
+
+
+          <h3 className="mt-2 text-lg font-semibold">
+            {title}
+          </h3>
+
+        </div>
+
+
+        {value !==
+          undefined &&
+          value !==
+            null && (
+          <p className="text-3xl font-semibold">
+            {value}
+          </p>
+        )}
+
+      </div>
+
+
+      <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
+        {description}
+      </p>
+
+
+      {href && (
+        <p className="mt-5 text-sm font-medium">
+          Open →
+        </p>
+      )}
+    </>
+  );
+
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="rounded-2xl border border-[var(--line)] bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-sm"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+
+  return (
+    <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+      {content}
+    </div>
+  );
+}
+
+
 export default async function AdminDashboardPage() {
   const session =
     await requirePageRole([
@@ -60,72 +181,47 @@ export default async function AdminDashboardPage() {
       : null;
 
 
-  const articleCount =
-    await prisma.article.count({
+  const articleWhere =
+    isAuthor
+      ? ownAuthor
+        ? {
+            authorId:
+              ownAuthor.id,
+          }
+        : {
+            id: {
+              equals:
+                "__no_article__",
+            },
+          }
+      : undefined;
+
+
+  const [
+    articleCount,
+    recentArticles,
+    productCount,
+    clickCount,
+    providerCount,
+    staffCount,
+    authorCount,
+  ] = await Promise.all([
+    prisma.article.count({
       where:
-        isAuthor
-          ? ownAuthor
-            ? {
-                authorId:
-                  ownAuthor.id,
-              }
-            : {
-                id: {
-                  equals:
-                    "__no_article__",
-                },
-              }
-          : undefined,
-    });
+        articleWhere,
+    }),
 
-
-  const productCount =
-    isAdmin || isEditor
-      ? await prisma.product.count()
-      : null;
-
-
-  const clickCount =
-    isAdmin || isAnalyst
-      ? await prisma.affiliateClick.count()
-      : null;
-
-
-  const providerCount =
-    isAdmin
-      ? await prisma.affiliateProvider.count()
-      : null;
-
-
-  const staffCount =
-    isAdmin
-      ? await prisma.user.count()
-      : null;
-
-
-  const recentArticles =
-    await prisma.article.findMany({
+    prisma.article.findMany({
       where:
-        isAuthor
-          ? ownAuthor
-            ? {
-                authorId:
-                  ownAuthor.id,
-              }
-            : {
-                id: {
-                  equals:
-                    "__no_article__",
-                },
-              }
-          : undefined,
+        articleWhere,
 
       orderBy: {
         updatedAt:
           "desc",
       },
 
-      take: 5,
+      take:
+        5,
 
       select: {
         id: true,
@@ -145,7 +241,54 @@ export default async function AdminDashboardPage() {
           },
         },
       },
-    });
+    }),
+
+    isAdmin ||
+    isEditor
+      ? prisma.product.count()
+      : Promise.resolve(
+          null
+        ),
+
+    isAdmin ||
+    isAnalyst
+      ? prisma.affiliateClick.count()
+      : Promise.resolve(
+          null
+        ),
+
+    isAdmin
+      ? prisma.affiliateProvider.count()
+      : Promise.resolve(
+          null
+        ),
+
+    isAdmin
+      ? prisma.user.count()
+      : Promise.resolve(
+          null
+        ),
+
+    isAdmin
+      ? prisma.author.count()
+      : Promise.resolve(
+          null
+        ),
+  ]);
+
+
+  const canManageContent =
+    isAdmin ||
+    isEditor ||
+    isAuthor;
+
+  const canManageProducts =
+    isAdmin ||
+    isEditor;
+
+  const canViewAnalytics =
+    isAdmin ||
+    isAnalyst;
 
 
   return (
@@ -153,136 +296,90 @@ export default async function AdminDashboardPage() {
 
       <div className="container-shell">
 
-        <div className="flex flex-wrap items-start justify-between gap-6">
+        <header className="flex flex-wrap items-start justify-between gap-6">
 
           <div>
 
             <p className="admin-eyebrow">
-              Venuvella
+              Venuvella administration
             </p>
 
 
             <h1 className="display-serif mt-2 text-5xl">
-              Admin dashboard
+              Dashboard
             </h1>
 
 
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-              Signed in as{" "}
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
+
+              <span>
+                Signed in as
+              </span>
+
+
               <span className="font-medium text-[var(--ink)]">
                 {session.email}
               </span>
-              {" · "}
-              {session.role}
-            </p>
+
+
+              <span>
+                ·
+              </span>
+
+
+              <span className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em]">
+                {getRoleLabel(
+                  session.role
+                )}
+              </span>
+
+            </div>
 
           </div>
 
 
-          <form
-            action={
-              logoutAdminAction
-            }
-          >
-            <button
-              type="submit"
+          <div className="flex flex-wrap gap-2">
+
+            <Link
+              href="/"
               className="admin-secondary"
             >
-              Log out
-            </button>
-          </form>
-
-        </div>
+              View site
+            </Link>
 
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-
-          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
-
-            <p className="admin-eyebrow">
-              Articles
-            </p>
-
-            <p className="mt-2 text-3xl font-semibold">
-              {articleCount}
-            </p>
+            <form
+              action={
+                logoutAdminAction
+              }
+            >
+              <button
+                type="submit"
+                className="admin-secondary"
+              >
+                Log out
+              </button>
+            </form>
 
           </div>
 
-
-          {productCount !== null && (
-            <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
-
-              <p className="admin-eyebrow">
-                Products
-              </p>
-
-              <p className="mt-2 text-3xl font-semibold">
-                {productCount}
-              </p>
-
-            </div>
-          )}
+        </header>
 
 
-          {clickCount !== null && (
-            <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+        {isAuthor &&
+          !ownAuthor && (
+          <div className="mt-8 rounded-2xl border border-amber-300 bg-amber-50 p-5">
 
-              <p className="admin-eyebrow">
-                Affiliate clicks
-              </p>
-
-              <p className="mt-2 text-3xl font-semibold">
-                {clickCount}
-              </p>
-
-            </div>
-          )}
-
-
-          {providerCount !== null && (
-            <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
-
-              <p className="admin-eyebrow">
-                Providers
-              </p>
-
-              <p className="mt-2 text-3xl font-semibold">
-                {providerCount}
-              </p>
-
-            </div>
-          )}
-
-
-          {staffCount !== null && (
-            <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
-
-              <p className="admin-eyebrow">
-                Staff
-              </p>
-
-              <p className="mt-2 text-3xl font-semibold">
-                {staffCount}
-              </p>
-
-            </div>
-          )}
-
-        </section>
-
-
-        {isAuthor && !ownAuthor && (
-          <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-5">
-
-            <p className="font-medium">
+            <p className="font-semibold">
               Author profile required
             </p>
 
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-              Your account is not linked to an
-              author profile yet. An administrator
-              must link your account before you can
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+              Your account is not linked
+              to an author profile yet.
+              An administrator must link
+              your account before you can
               create or edit articles.
             </p>
 
@@ -292,148 +389,221 @@ export default async function AdminDashboardPage() {
 
         <section className="mt-10">
 
-          <div className="flex items-end justify-between gap-4">
+          <div>
 
-            <div>
+            <p className="admin-eyebrow">
+              Overview
+            </p>
 
-              <p className="admin-eyebrow">
-                Workspace
-              </p>
 
-              <h2 className="display-serif mt-2 text-3xl">
-                Administration
-              </h2>
-
-            </div>
+            <h2 className="display-serif mt-2 text-3xl">
+              Workspace summary
+            </h2>
 
           </div>
 
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 
-            {(isAdmin ||
-              isEditor ||
-              isAuthor) && (
-              <Link
-                href="/admin/articles"
-                className="rounded-2xl border border-[var(--line)] bg-white p-5 transition hover:-translate-y-0.5"
-              >
-                <p className="font-semibold">
-                  Articles
-                </p>
+            <DashboardCard
+              eyebrow={
+                isAuthor
+                  ? "Your content"
+                  : "Editorial"
+              }
+              title="Articles"
+              description={
+                isAuthor
+                  ? "Articles assigned to your author profile."
+                  : "Editorial content currently stored in Venuvella."
+              }
+              value={
+                articleCount
+              }
+              href={
+                canManageContent
+                  ? "/admin/articles"
+                  : undefined
+              }
+            />
 
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                  Create and manage editorial content.
-                </p>
-              </Link>
-            )}
 
-
-            {(isAdmin ||
-              isEditor) && (
-              <Link
+            {productCount !==
+              null && (
+              <DashboardCard
+                eyebrow="Commerce"
+                title="Products"
+                description="Products available in the central editorial catalog."
+                value={
+                  productCount
+                }
                 href="/admin/products"
-                className="rounded-2xl border border-[var(--line)] bg-white p-5 transition hover:-translate-y-0.5"
-              >
-                <p className="font-semibold">
-                  Products
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                  Manage the Venuvella product catalog.
-                </p>
-              </Link>
+              />
             )}
 
 
-            {(isAdmin ||
-              isAnalyst) && (
-              <Link
+            {clickCount !==
+              null && (
+              <DashboardCard
+                eyebrow="Performance"
+                title="Affiliate clicks"
+                description="Tracked affiliate click activity across Venuvella."
+                value={
+                  clickCount
+                }
                 href="/admin/analytics"
-                className="rounded-2xl border border-[var(--line)] bg-white p-5 transition hover:-translate-y-0.5"
-              >
-                <p className="font-semibold">
-                  Analytics
-                </p>
+              />
+            )}
 
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                  Review affiliate click and traffic data.
-                </p>
-              </Link>
+
+            {providerCount !==
+              null && (
+              <DashboardCard
+                eyebrow="Infrastructure"
+                title="Providers"
+                description="Configured affiliate and commerce providers."
+                value={
+                  providerCount
+                }
+                href="/admin/providers"
+              />
+            )}
+
+
+            {staffCount !==
+              null && (
+              <DashboardCard
+                eyebrow="Access"
+                title="Staff"
+                description="Administrator, editor, author, and analyst accounts."
+                value={
+                  staffCount
+                }
+                href="/admin/staff"
+              />
+            )}
+
+          </div>
+
+        </section>
+
+
+        <section className="mt-12">
+
+          <div>
+
+            <p className="admin-eyebrow">
+              Workspace
+            </p>
+
+
+            <h2 className="display-serif mt-2 text-3xl">
+              Your tools
+            </h2>
+
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+              The tools below are shown
+              according to your current
+              staff role and permissions.
+            </p>
+
+          </div>
+
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+
+            {canManageContent && (
+              <DashboardCard
+                eyebrow="Editorial"
+                title="Articles"
+                description={
+                  isAuthor
+                    ? "Create and manage articles assigned to your author profile."
+                    : "Create, review, publish, and manage editorial content."
+                }
+                href="/admin/articles"
+              />
+            )}
+
+
+            {canManageProducts && (
+              <DashboardCard
+                eyebrow="Catalog"
+                title="Products"
+                description="Manage the central product catalog, product data, and commerce relationships."
+                href="/admin/products"
+              />
+            )}
+
+
+            {canViewAnalytics && (
+              <DashboardCard
+                eyebrow="Reporting"
+                title="Analytics"
+                description="Review affiliate click activity, traffic data, and performance signals."
+                href="/admin/analytics"
+              />
             )}
 
 
             {isAdmin && (
               <>
-                <Link
+                <DashboardCard
+                  eyebrow="Team"
+                  title="Staff"
+                  description="Manage staff accounts, roles, passwords, access, and security."
+                  value={
+                    staffCount
+                  }
                   href="/admin/staff"
-                  className="rounded-2xl border border-[var(--line)] bg-white p-5 transition hover:-translate-y-0.5"
-                >
-                  <p className="font-semibold">
-                    Staff
-                  </p>
-
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                    Manage administrator, editor,
-                    author, and analyst accounts.
-                  </p>
-                </Link>
+                />
 
 
-                <Link
+                <DashboardCard
+                  eyebrow="Editorial"
+                  title="Authors"
+                  description="Manage author profiles and connect authors to staff accounts."
+                  value={
+                    authorCount
+                  }
+                  href="/admin/authors"
+                />
+
+
+                <DashboardCard
+                  eyebrow="Commerce"
+                  title="Providers"
+                  description="Configure affiliate providers and their integration settings."
+                  value={
+                    providerCount
+                  }
                   href="/admin/providers"
-                  className="rounded-2xl border border-[var(--line)] bg-white p-5 transition hover:-translate-y-0.5"
-                >
-                  <p className="font-semibold">
-                    Providers
-                  </p>
-
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                    Configure affiliate providers.
-                  </p>
-                </Link>
+                />
 
 
-                <Link
+                <DashboardCard
+                  eyebrow="Automation"
+                  title="Provider sync"
+                  description="Run provider synchronization and review recent synchronization activity."
                   href="/admin/provider-sync"
-                  className="rounded-2xl border border-[var(--line)] bg-white p-5 transition hover:-translate-y-0.5"
-                >
-                  <p className="font-semibold">
-                    Provider sync
-                  </p>
-
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                    Run and review provider synchronization.
-                  </p>
-                </Link>
+                />
 
 
-                <Link
+                <DashboardCard
+                  eyebrow="Automation"
+                  title="Scheduler"
+                  description="Manage automatic provider synchronization schedules and jobs."
                   href="/admin/provider-sync/scheduler"
-                  className="rounded-2xl border border-[var(--line)] bg-white p-5 transition hover:-translate-y-0.5"
-                >
-                  <p className="font-semibold">
-                    Scheduler
-                  </p>
-
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                    Manage automated provider sync scheduling.
-                  </p>
-                </Link>
+                />
 
 
-                <Link
+                <DashboardCard
+                  eyebrow="Infrastructure"
+                  title="Affiliate operations"
+                  description="Monitor affiliate infrastructure, redirects, provider health, and operations."
                   href="/admin/affiliate-ops"
-                  className="rounded-2xl border border-[var(--line)] bg-white p-5 transition hover:-translate-y-0.5"
-                >
-                  <p className="font-semibold">
-                    Affiliate operations
-                  </p>
-
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                    Monitor affiliate infrastructure and health.
-                  </p>
-                </Link>
+                />
               </>
             )}
 
@@ -442,48 +612,130 @@ export default async function AdminDashboardPage() {
         </section>
 
 
-        <section className="mt-10">
+        {isAdmin && (
+          <section className="mt-12">
 
-          <div>
+            <div>
 
-            <p className="admin-eyebrow">
-              Content
-            </p>
+              <p className="admin-eyebrow">
+                Quick actions
+              </p>
 
-            <h2 className="display-serif mt-2 text-3xl">
-              Recent articles
-            </h2>
+
+              <h2 className="display-serif mt-2 text-3xl">
+                Common tasks
+              </h2>
+
+            </div>
+
+
+            <div className="mt-5 flex flex-wrap gap-3">
+
+              <Link
+                href="/admin/articles/new"
+                className="admin-primary"
+              >
+                + New article
+              </Link>
+
+
+              <Link
+                href="/admin/staff/new"
+                className="admin-secondary"
+              >
+                + Add staff
+              </Link>
+
+
+              <Link
+                href="/admin/authors"
+                className="admin-secondary"
+              >
+                Manage authors
+              </Link>
+
+
+              <Link
+                href="/admin/provider-sync"
+                className="admin-secondary"
+              >
+                Run provider sync
+              </Link>
+
+            </div>
+
+          </section>
+        )}
+
+
+        <section className="mt-12">
+
+          <div className="flex flex-wrap items-end justify-between gap-4">
+
+            <div>
+
+              <p className="admin-eyebrow">
+                Content
+              </p>
+
+
+              <h2 className="display-serif mt-2 text-3xl">
+                Recent articles
+              </h2>
+
+            </div>
+
+
+            {canManageContent && (
+              <Link
+                href="/admin/articles"
+                className="admin-link"
+              >
+                View all articles →
+              </Link>
+            )}
 
           </div>
 
 
           <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
 
-            {recentArticles.length > 0 ? (
-
+            {recentArticles.length >
+            0 ? (
               <div className="divide-y divide-[var(--line)]">
 
                 {recentArticles.map(
                   (article) => (
 
                     <Link
-                      key={article.id}
+                      key={
+                        article.id
+                      }
                       href={`/admin/articles/${article.id}`}
-                      className="block p-5 hover:bg-[var(--paper)]"
+                      className="block p-5 transition hover:bg-[var(--paper)]"
                     >
 
-                      <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
 
-                        <div>
+                        <div className="min-w-0">
 
                           <p className="font-medium">
                             {article.title}
                           </p>
 
-                          <p className="mt-1 text-xs text-[var(--muted)]">
+
+                          <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
                             {article.author.name}
                             {" · "}
                             {article.category.name}
+                          </p>
+
+
+                          <p className="mt-1 text-xs text-[var(--muted)]">
+                            Updated{" "}
+                            {formatDateTime(
+                              article.updatedAt
+                            )}
                           </p>
 
                         </div>
@@ -501,13 +753,29 @@ export default async function AdminDashboardPage() {
                 )}
 
               </div>
-
             ) : (
+              <div className="p-10 text-center">
 
-              <div className="p-8 text-sm text-[var(--muted)]">
-                No articles available.
+                <p className="text-sm text-[var(--muted)]">
+                  No articles are available
+                  for this account yet.
+                </p>
+
+
+                {canManageContent &&
+                  (
+                    !isAuthor ||
+                    ownAuthor
+                  ) && (
+                  <Link
+                    href="/admin/articles/new"
+                    className="admin-primary mt-6 inline-flex"
+                  >
+                    Create an article
+                  </Link>
+                )}
+
               </div>
-
             )}
 
           </div>
