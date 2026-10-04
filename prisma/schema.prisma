@@ -119,6 +119,8 @@ model Article {
   updatedAt                   DateTime                    @updatedAt
   createdAt                   DateTime                    @default(now())
   clicks                      AffiliateClick[]
+  pageViews                   ArticlePageView[]
+  productImpressions          ProductImpression[]
   author                      Author                      @relation(fields: [authorId], references: [id])
   category                    Category                    @relation(fields: [categoryId], references: [id])
   blocks                      ArticleBlock[]
@@ -195,6 +197,7 @@ model Product {
   createdAt               DateTime                    @default(now())
   updatedAt               DateTime                    @updatedAt
   clicks                  AffiliateClick[]
+  impressions             ProductImpression[]
   articleProducts         ArticleProduct[]
   comparisonItems         ComparisonItem[]
   brand                   Brand?                      @relation(fields: [brandId], references: [id])
@@ -486,28 +489,66 @@ model NewsletterCampaignProduct {
   @@index([productId])
 }
 
-model AffiliateClick {
-  id          String             @id @default(cuid())
-  productId   String?
-  providerId  String?
-  articleId   String?
-  category    String?
-  campaign    String?
+model ProductImpression {
+  id            String   @id @default(cuid())
+  articleId     String
+  productId     String
+  placementKey  String
+  placementType String
+  position      Int
+  sessionHash   String?
+  createdAt     DateTime @default(now())
+  article       Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([articleId, createdAt])
+  @@index([productId, createdAt])
+  @@index([articleId, productId, createdAt])
+  @@index([sessionHash, articleId, productId, placementKey, createdAt])
+}
+
+model ArticlePageView {
+  id          String   @id @default(cuid())
+  articleId   String
+  sessionHash String?
   referrer    String?
   deviceType  String?
   utmSource   String?
   utmMedium   String?
   utmCampaign String?
-  sessionHash String?
-  createdAt   DateTime           @default(now())
-  article     Article?           @relation(fields: [articleId], references: [id])
-  product     Product?           @relation(fields: [productId], references: [id])
-  provider    AffiliateProvider? @relation(fields: [providerId], references: [id])
+  createdAt   DateTime @default(now())
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([articleId, createdAt])
+  @@index([sessionHash, articleId, createdAt])
+}
+
+model AffiliateClick {
+  id           String             @id @default(cuid())
+  productId    String?
+  providerId   String?
+  articleId    String?
+  category     String?
+  campaign     String?
+  referrer     String?
+  deviceType   String?
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  placementKey String?
+  sessionHash  String?
+  createdAt    DateTime           @default(now())
+  article      Article?           @relation(fields: [articleId], references: [id])
+  product      Product?           @relation(fields: [productId], references: [id])
+  provider     AffiliateProvider? @relation(fields: [providerId], references: [id])
 
   @@index([createdAt])
   @@index([productId, createdAt])
   @@index([providerId, createdAt])
   @@index([articleId, createdAt])
+  @@index([placementKey, createdAt])
 }
 
 model Redirect {

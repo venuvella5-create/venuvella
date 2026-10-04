@@ -6,8 +6,10 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
-  Clock3,
+  ExternalLink,
+  ShieldCheck,
   ShoppingBag,
+  Sparkles,
 } from "lucide-react";
 
 import {
@@ -15,255 +17,93 @@ import {
 } from "@/components/editorial/ProductCard";
 
 import {
-  getArticleBySlug,
-  getPublishedArticleSlugs,
-} from "@/lib/content/articles";
+  getProductBySlug,
+  getRelatedProducts,
+} from "@/lib/products/queries";
 
-const getCachedArticleBySlug =
+
+const getCachedProductBySlug =
   cache(
-    getArticleBySlug
+    getProductBySlug
   );
 
 
-import {
-  prisma,
-} from "@/lib/db/prisma";
+export const dynamic =
+  "force-dynamic";
 
 
-export const revalidate =
-  300;
-
-
-export async function generateStaticParams() {
-  const slugs =
-    await getPublishedArticleSlugs();
-
-
-  return slugs.map(
-    (slug) => ({
-      slug,
-    })
-  );
-}
-
-
-function getBlockText(
-  data: unknown
-) {
-  if (
-    typeof data ===
-      "object" &&
-    data !==
-      null &&
-    !Array.isArray(
-      data
-    ) &&
-    "text" in
-      data
-  ) {
-    const value =
-      (
-        data as Record<
-          string,
-          unknown
-        >
-      ).text;
-
-
-    if (
-      typeof value ===
-      "string"
-    ) {
-      return value;
-    }
-
-
-    if (
-      value !==
-        null &&
-      value !==
-        undefined
-    ) {
-      return String(
-        value
-      );
-    }
-  }
-
-
-  return "";
-}
-
-
-function getProductId(
-  data: unknown
-) {
-  if (
-    typeof data ===
-      "object" &&
-    data !==
-      null &&
-    !Array.isArray(
-      data
-    ) &&
-    "productId" in
-      data
-  ) {
-    const value =
-      (
-        data as Record<
-          string,
-          unknown
-        >
-      ).productId;
-
-
-    if (
-      typeof value ===
-      "string"
-    ) {
-      return value;
-    }
-  }
-
-
-  return null;
-}
-
-
-function getProductIds(
-  data: unknown
-) {
-  if (
-    typeof data ===
-      "object" &&
-    data !==
-      null &&
-    !Array.isArray(
-      data
-    ) &&
-    "productIds" in
-      data
-  ) {
-    const value =
-      (
-        data as Record<
-          string,
-          unknown
-        >
-      ).productIds;
-
-
-    if (
-      Array.isArray(
-        value
-      )
-    ) {
-      return value.filter(
-        (
-          productId
-        ): productId is string =>
-          typeof productId ===
-            "string" &&
-          productId.length >
-            0
-      );
-    }
-  }
-
-
-  return [];
-}
-
-
-function createHeadingId(
-  text: string,
-  index: number
-) {
-  const slug =
-    text
-      .toLowerCase()
-      .trim()
-      .replace(
-        /[^a-z0-9]+/g,
-        "-"
-      )
-      .replace(
-        /^-+|-+$/g,
-        ""
-      );
-
-
-  return slug
-    ? `${slug}-${index + 1}`
-    : `section-${index + 1}`;
-}
-
-
-function estimateReadingTime(
-  blocks: Array<{
-    type: string;
-    data: unknown;
-  }>,
-  title: string,
-  subtitle:
+function formatPrice(
+  price: {
+    toString():
+      string;
+  } | number,
+  currency:
     | string
     | null
 ) {
-  const text =
-    [
-      title,
-      subtitle ??
-        "",
-      ...blocks.map(
-        (block) =>
-          getBlockText(
-            block.data
-          )
-      ),
-    ]
-      .join(
-        " "
-      )
-      .trim();
+  const numeric =
+    Number(
+      price.toString()
+    );
 
 
-  const words =
-    text
-      ? text.split(
-          /\s+/
-        ).length
-      : 0;
-
-
-  return Math.max(
-    1,
-    Math.ceil(
-      words /
-        220
+  if (
+    Number.isFinite(
+      numeric
     )
-  );
+  ) {
+    try {
+      return new Intl.NumberFormat(
+        "en-US",
+        {
+          style:
+            "currency",
+
+          currency:
+            currency ??
+            "USD",
+
+          maximumFractionDigits:
+            2,
+        }
+      ).format(
+        numeric
+      );
+    } catch {
+      return `${currency ?? ""} ${numeric.toFixed(2)}`.trim();
+    }
+  }
+
+
+  return `${currency ?? ""} ${price.toString()}`.trim();
 }
 
 
-function formatPublishedDate(
-  value: Date
+function normalizeAvailability(
+  value:
+    | string
+    | null
 ) {
-  return new Intl.DateTimeFormat(
-    "en-US",
-    {
-      month:
-        "long",
+  if (
+    !value
+  ) {
+    return "Check retailer";
+  }
 
-      day:
-        "numeric",
 
-      year:
-        "numeric",
-    }
-  ).format(
-    value
-  );
+  return value
+    .replaceAll(
+      "_",
+      " "
+    )
+    .toLowerCase()
+    .replace(
+      /^./,
+      (
+        character
+      ) =>
+        character.toUpperCase()
+    );
 }
 
 
@@ -280,37 +120,37 @@ export async function generateMetadata({
   } = await params;
 
 
-  const article =
-    await getCachedArticleBySlug(
+  const product =
+    await getCachedProductBySlug(
       slug
     );
 
 
   if (
-    !article
+    !product
   ) {
     return {};
   }
 
 
   const title =
-    article.seo?.title ??
-    article.title;
+    product.brand?.name
+      ? `${product.name} by ${product.brand.name}`
+      : product.name;
 
 
   const description =
-    article.seo?.description ??
-    article.excerpt ??
-    article.subtitle ??
-    undefined;
+    product.editorialSummary ??
+    product.description ??
+    `Discover ${product.name}, a Venuvella product pick.`;
 
 
   const canonical =
-    `/articles/${article.slug}`;
+    `/products/${product.slug}`;
 
 
   const socialImage =
-    article.featuredImage ??
+    product.images[0]?.url ??
     "/og-default.jpg";
 
 
@@ -325,7 +165,7 @@ export async function generateMetadata({
 
     openGraph: {
       type:
-        "article",
+        "website",
 
       url:
         canonical,
@@ -337,26 +177,14 @@ export async function generateMetadata({
       siteName:
         "Venuvella",
 
-      publishedTime:
-        article.publishedAt?.toISOString(),
-
-      modifiedTime:
-        article.updatedAt.toISOString(),
-
-      authors: [
-        article.author.name,
-      ],
-
-      section:
-        article.category.name,
-
       images: [
         {
           url:
             socialImage,
 
           alt:
-            article.title,
+            product.images[0]?.altText ??
+            product.name,
         },
       ],
     },
@@ -377,252 +205,250 @@ export async function generateMetadata({
 }
 
 
-export default async function ArticlePage({
+export default async function ProductDetailPage({
   params,
+  searchParams,
 }: {
   params:
     Promise<{
       slug: string;
     }>;
+
+  searchParams:
+    Promise<{
+      article?:
+        string;
+
+      placement?:
+        string;
+
+      campaign?:
+        string;
+
+      utm_source?:
+        string;
+
+      utm_medium?:
+        string;
+
+      utm_campaign?:
+        string;
+    }>;
 }) {
   const {
     slug,
-  } = await params;
+  } =
+    await params;
 
 
-  const article =
-    await getCachedArticleBySlug(
+  const query =
+    await searchParams;
+
+
+  const articleSlug =
+    typeof query.article ===
+    "string"
+      ? query.article
+      : null;
+
+
+  const placementKey =
+    typeof query.placement ===
+    "string"
+      ? query.placement
+      : null;
+
+
+  const campaign =
+    typeof query.campaign ===
+    "string"
+      ? query.campaign
+      : null;
+
+
+  const utmSource =
+    typeof query.utm_source ===
+    "string"
+      ? query.utm_source
+      : null;
+
+
+  const utmMedium =
+    typeof query.utm_medium ===
+    "string"
+      ? query.utm_medium
+      : null;
+
+
+  const utmCampaign =
+    typeof query.utm_campaign ===
+    "string"
+      ? query.utm_campaign
+      : null;
+
+
+  const product =
+    await getCachedProductBySlug(
       slug
     );
 
 
   if (
-    !article
+    !product
   ) {
     notFound();
   }
 
-
-  const productIdSet =
-    new Set<string>();
-
-
-  article.blocks.forEach(
-    (block) => {
-      if (
-        block.type ===
-        "PRODUCT"
-      ) {
-        const productId =
-          getProductId(
-            block.data
-          );
+  const productSlug =
+  product.slug;
 
 
-        if (
-          productId
-        ) {
-          productIdSet.add(
-            productId
-          );
-        }
-      }
-
-
-      if (
-        block.type ===
-        "PRODUCT_GRID"
-      ) {
-        const productIds =
-          getProductIds(
-            block.data
-          );
-
-
-        productIds.forEach(
-          (
-            productId
-          ) => {
-            productIdSet.add(
-              productId
-            );
-          }
-        );
-      }
-    }
-  );
-
-
-  const productIds =
-    Array.from(
-      productIdSet
+  const relatedProducts =
+    await getRelatedProducts(
+      product.id,
+      product.categoryId
     );
 
 
-  const products =
-    productIds.length >
-    0
-      ? await prisma.product.findMany({
-          where: {
-            id: {
-              in: productIds,
-            },
-
-            status:
-              "PUBLISHED",
-          },
-
-          include: {
-            brand:
-              true,
-
-            category:
-              true,
-
-            images: {
-              orderBy: {
-                position:
-                  "asc",
-              },
-            },
-          },
-        })
-      : [];
+  const primaryImage =
+    product.images[0];
 
 
-  const relatedArticles =
-    await prisma.article.findMany({
-      where: {
-        id: {
-          not:
-            article.id,
-        },
-
-        categoryId:
-          article.categoryId,
-
-        status:
-          "PUBLISHED",
-
-        publishedAt: {
-          lte:
-            new Date(),
-        },
-      },
-
-      orderBy: [
-        {
-          publishedAt:
-            "desc",
-        },
-        {
-          updatedAt:
-            "desc",
-        },
-      ],
-
-      take:
-        3,
-
-      select: {
-        id:
-          true,
-
-        title:
-          true,
-
-        slug:
-          true,
-
-        excerpt:
-          true,
-      },
-    });
+  const goParams =
+    new URLSearchParams();
 
 
-  const productMap =
-    new Map(
-      products.map(
-        (
-          product
-        ) => [
-          product.id,
-          product,
-        ]
-      )
+  if (
+    articleSlug
+  ) {
+    goParams.set(
+      "article",
+      articleSlug
     );
+  }
 
 
-  const readingMinutes =
-    estimateReadingTime(
-      article.blocks,
-      article.title,
-      article.subtitle
+  if (
+    placementKey
+  ) {
+    goParams.set(
+      "placement",
+      placementKey
     );
+  }
 
 
-  const headingItems =
-    article.blocks
-      .map(
-        (
-          block,
-          index
-        ) => ({
-          id:
-            block.id,
+  if (
+    campaign
+  ) {
+    goParams.set(
+      "campaign",
+      campaign
+    );
+  }
 
-          index,
 
-          type:
-            block.type,
+  if (
+    utmSource
+  ) {
+    goParams.set(
+      "utm_source",
+      utmSource
+    );
+  }
 
-          text:
-            getBlockText(
-              block.data
-            ),
-        })
-      )
-      .filter(
-        (
-          block
-        ) =>
-          block.type ===
-            "HEADING" &&
-          block.text.trim()
-            .length >
-            0
-      )
-      .map(
-        (
-          block
-        ) => ({
-          ...block,
 
-          anchor:
-            createHeadingId(
-              block.text,
-              block.index
-            ),
-        })
+  if (
+    utmMedium
+  ) {
+    goParams.set(
+      "utm_medium",
+      utmMedium
+    );
+  }
+
+
+  if (
+    utmCampaign
+  ) {
+    goParams.set(
+      "utm_campaign",
+      utmCampaign
+    );
+  }
+
+
+  const goQuery =
+    goParams.toString();
+
+
+  const goHref =
+    goQuery
+      ? `/go/${product.slug}?${goQuery}`
+      : `/go/${product.slug}`;
+
+
+  function buildProviderGoHref(
+    providerSlug: string
+  ) {
+    const providerParams =
+      new URLSearchParams(
+        goParams
       );
 
 
-  const headingAnchorMap =
-    new Map(
-      headingItems.map(
-        (
-          item
-        ) => [
-          item.id,
-          item.anchor,
-        ]
-      )
+    providerParams.set(
+      "provider",
+      providerSlug
     );
 
 
-  const hasProducts =
-    productIds.length >
-    0;
+    return `/go/${productSlug}?${providerParams.toString()}`;
+  }
+
+
+  const pricedOffers =
+    product.providerProducts
+      .filter(
+        (
+          offer
+        ) =>
+          offer.price !==
+          null
+      )
+      .sort(
+        (
+          left,
+          right
+        ) =>
+          Number(
+            left.price?.toString() ??
+            Number.POSITIVE_INFINITY
+          ) -
+          Number(
+            right.price?.toString() ??
+            Number.POSITIVE_INFINITY
+          )
+      );
+
+
+  const bestPrice =
+    pricedOffers[0] ??
+    null;
+
+
+  const hasMultipleOffers =
+    product.providerProducts.length >
+    1;
+
+
+  const hasDecisionSupport =
+    Boolean(
+      product.editorialSummary ||
+      product.description ||
+      product.features.length >
+        0
+    );
 
 
   const siteUrl =
@@ -630,149 +456,110 @@ export default async function ArticlePage({
     "https://venuvella.vercel.app";
 
 
-  const articleUrl =
+  const productUrl =
     new URL(
-      `/articles/${article.slug}`,
+      `/products/${product.slug}`,
       siteUrl
     ).toString();
 
 
-  const articleStructuredData = {
+  const structuredOffers =
+    product.providerProducts
+      .filter(
+        (
+          offer
+        ) =>
+          offer.price !==
+          null
+      )
+      .map(
+        (
+          offer
+        ) => ({
+          "@type":
+            "Offer",
+
+          url:
+            productUrl,
+
+          price:
+            offer.price!.toString(),
+
+          priceCurrency:
+            offer.currency ??
+            "USD",
+
+          seller: {
+            "@type":
+              "Organization",
+
+            name:
+              offer.provider.name,
+          },
+        })
+      );
+
+
+  const productStructuredData = {
     "@context":
       "https://schema.org",
 
     "@type":
-      "Article",
+      "Product",
 
-    headline:
-      article.title,
+    name:
+      product.name,
 
     description:
-      article.seo?.description ??
-      article.excerpt ??
-      article.subtitle ??
+      product.editorialSummary ??
+      product.description ??
       undefined,
 
     image:
-      article.featuredImage
-        ? [
-            article.featuredImage,
-          ]
+      product.images.length >
+      0
+        ? product.images.map(
+            (
+              image
+            ) =>
+              image.url
+          )
         : undefined,
 
-    datePublished:
-      article.publishedAt?.toISOString(),
+    brand:
+      product.brand?.name
+        ? {
+            "@type":
+              "Brand",
 
-    dateModified:
-      article.updatedAt.toISOString(),
+            name:
+              product.brand.name,
+          }
+        : undefined,
 
-    inLanguage:
-      "en-US",
-
-    author: {
-      "@type":
-        "Person",
-
-      name:
-        article.author.name,
-    },
-
-    publisher: {
-      "@type":
-        "Organization",
-
-      name:
-        "Venuvella",
-
-      url:
-        siteUrl,
-    },
-
-    articleSection:
-      article.category.name,
-
-    mainEntityOfPage: {
-      "@type":
-        "WebPage",
-
-      "@id":
-        articleUrl,
-    },
+    category:
+      product.category.name,
 
     url:
-      articleUrl,
+      productUrl,
+
+    offers:
+      structuredOffers.length >
+      0
+        ? structuredOffers
+        : undefined,
   };
-
-
-  const breadcrumbStructuredData = {
-    "@context":
-      "https://schema.org",
-
-    "@type":
-      "BreadcrumbList",
-
-    itemListElement: [
-      {
-        "@type":
-          "ListItem",
-
-        position:
-          1,
-
-        name:
-          "Home",
-
-        item:
-          siteUrl,
-      },
-      {
-        "@type":
-          "ListItem",
-
-        position:
-          2,
-
-        name:
-          article.category.name,
-
-        item:
-          new URL(
-            `/${article.category.slug}`,
-            siteUrl
-          ).toString(),
-      },
-      {
-        "@type":
-          "ListItem",
-
-        position:
-          3,
-
-        name:
-          article.title,
-
-        item:
-          articleUrl,
-      },
-    ],
-  };
-
-
-  const structuredData = [
-    articleStructuredData,
-    breadcrumbStructuredData,
-  ];
 
 
   return (
-    <main className="pb-20 sm:pb-28">
+    <main className="pb-32 sm:pb-28">
 
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html:
             JSON.stringify(
-              structuredData
+              productStructuredData
             ).replace(
               /</g,
               "\\u003c"
@@ -781,737 +568,760 @@ export default async function ArticlePage({
       />
 
 
-      <article>
+      <div className="container-shell pt-8 sm:pt-10">
 
-        {/* Article masthead */}
+        <nav
+          aria-label="Breadcrumb"
+          className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]"
+        >
 
-        <header className="border-b border-[var(--line)]">
+          <Link
+            href="/products"
+            className="inline-flex items-center gap-2 transition hover:text-[var(--ink)]"
+          >
+            <ArrowLeft
+              size={
+                13
+              }
+            />
 
-          <div className="container-shell py-10 sm:py-14 lg:py-16">
+            Products
+          </Link>
 
-            <Link
-              href={`/${article.category.slug}`}
-              className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)] transition hover:text-[var(--ink)]"
-            >
-              <ArrowLeft
-                size={
-                  14
+
+          <span
+            aria-hidden="true"
+          >
+            /
+          </span>
+
+
+          <Link
+            href={`/products?category=${product.category.slug}`}
+            className="transition hover:text-[var(--ink)]"
+          >
+            {product.category.name}
+          </Link>
+
+        </nav>
+
+      </div>
+
+
+      {/* Product hero */}
+
+      <section className="container-shell grid gap-10 py-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16 lg:py-14">
+
+        <div>
+
+          <div className="relative aspect-square overflow-hidden bg-[var(--surface)]">
+
+            {primaryImage ? (
+              <Image
+                src={
+                  primaryImage.url
                 }
+                alt={
+                  primaryImage.altText ??
+                  product.name
+                }
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 55vw"
+                className="object-cover"
               />
+            ) : (
+              <div className="flex h-full items-center justify-center px-6 text-center text-sm text-[var(--muted)]">
+                Product image unavailable
+              </div>
+            )}
 
-              {article.category.name}
-            </Link>
-
-
-            <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
-
-              <div className="max-w-5xl">
-
-                <p className="text-[11px] font-semibold uppercase tracking-[0.19em] text-[var(--accent)] sm:text-xs">
-                  {article.category.name}
-                </p>
+          </div>
 
 
-                <h1 className="display-serif mt-4 text-5xl leading-[0.95] tracking-[-0.045em] sm:text-6xl lg:text-[76px] xl:text-[88px]">
-                  {article.title}
-                </h1>
+          {product.images.length >
+            1 && (
+            <div className="mt-3 grid grid-cols-4 gap-3">
 
+              {product.images
+                .slice(
+                  1,
+                  5
+                )
+                .map(
+                  (
+                    image
+                  ) => (
 
-                {article.subtitle && (
-                  <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
-                    {article.subtitle}
-                  </p>
+                    <div
+                      key={
+                        image.id
+                      }
+                      className="relative aspect-square overflow-hidden bg-[var(--surface)]"
+                    >
+
+                      <Image
+                        src={
+                          image.url
+                        }
+                        alt={
+                          image.altText ??
+                          product.name
+                        }
+                        fill
+                        sizes="160px"
+                        className="object-cover"
+                      />
+
+                    </div>
+
+                  )
                 )}
 
+            </div>
+          )}
 
-                {!article.subtitle &&
-                  article.excerpt && (
-                    <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
-                      {article.excerpt}
-                    </p>
-                  )}
-
-              </div>
+        </div>
 
 
-              <div className="border-t border-[var(--line)] pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+        <div className="flex flex-col justify-center lg:py-4">
 
-                <p className="text-xs leading-6 text-[var(--muted)]">
-                  By{" "}
-                  <span className="font-semibold text-[var(--ink)]">
-                    {article.author.name}
-                  </span>
-                </p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)] sm:text-xs">
+            {product.brand?.name ??
+              "Venuvella"}
+          </p>
 
 
-                {article.publishedAt && (
-                  <p className="mt-2 text-xs leading-6 text-[var(--muted)]">
-                    Published{" "}
-                    {formatPublishedDate(
-                      article.publishedAt
+          <h1 className="display-serif mt-4 text-5xl leading-[0.98] tracking-[-0.04em] sm:text-6xl lg:text-[68px]">
+            {product.name}
+          </h1>
+
+
+          {product.editorialSummary && (
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
+              {product.editorialSummary}
+            </p>
+          )}
+
+
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+
+            <TrustPoint
+              icon="edit"
+              title="Editorially selected"
+              body="Chosen as part of the Venuvella edit."
+            />
+
+            <TrustPoint
+              icon="shop"
+              title={
+                hasMultipleOffers
+                  ? `${product.providerProducts.length} retailer options`
+                  : "Retailer destination"
+              }
+              body="Compare available merchant information before leaving Venuvella."
+            />
+
+            <TrustPoint
+              icon="shield"
+              title="Tracked transparently"
+              body="Outbound affiliate clicks are routed through Venuvella."
+            />
+
+          </div>
+
+
+          {bestPrice && (
+            <div className="mt-8 rounded-2xl border border-[var(--line)] bg-[#f5f3ee] p-5">
+
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
+                Price reference
+              </p>
+
+
+              <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+
+                <div>
+
+                  <p className="text-2xl font-semibold">
+                    {formatPrice(
+                      bestPrice.price!,
+                      bestPrice.currency
                     )}
                   </p>
-                )}
 
 
-                <div className="mt-3 flex items-center gap-2 text-xs text-[var(--muted)]">
-
-                  <Clock3
-                    size={
-                      14
-                    }
-                  />
-
-                  <span>
-                    {readingMinutes} min read
-                  </span>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    Listed by {bestPrice.provider.name}
+                  </p>
 
                 </div>
 
 
-                {hasProducts && (
-                  <div className="mt-3 flex items-center gap-2 text-xs text-[var(--muted)]">
-
-                    <ShoppingBag
-                      size={
-                        14
-                      }
-                    />
-
-                    <span>
-                      Product recommendations included
-                    </span>
-
-                  </div>
-                )}
+                <span className="text-xs text-[var(--muted)]">
+                  Prices and availability may change at the retailer.
+                </span>
 
               </div>
 
             </div>
+          )}
+
+
+          <div className="mt-8">
+
+            <Link
+              href={
+                goHref
+              }
+              prefetch={
+                false
+              }
+              className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-8 py-4 text-[11px] font-semibold uppercase tracking-[0.14em] !text-white transition hover:opacity-90 sm:w-auto"
+            >
+              <span className="text-white">
+                Check price at retailer
+              </span>
+
+              <ExternalLink
+                size={
+                  14
+                }
+                className="text-white"
+              />
+            </Link>
+
+
+            <p className="mt-4 max-w-xl text-xs leading-6 text-[var(--muted)]">
+              Disclosure: Venuvella may earn a commission when you purchase
+              through links on our site, at no additional cost to you.{" "}
+              <Link
+                href="/affiliate-disclosure"
+                className="font-semibold text-[var(--ink)] underline underline-offset-4"
+              >
+                Learn more
+              </Link>.
+            </p>
 
           </div>
 
-        </header>
+        </div>
+
+      </section>
 
 
-        {/* Featured image */}
+      {/* Decision support */}
 
-        {article.featuredImage && (
-          <div className="container-shell pt-8 sm:pt-10">
+      {hasDecisionSupport && (
+        <section className="border-y border-[var(--line)] bg-[#f4f1ea] py-14 sm:py-16">
 
-            <div className="relative aspect-[16/9] overflow-hidden bg-[var(--warm)]">
+          <div className="container-shell grid gap-10 lg:grid-cols-[0.7fr_1.3fr]">
 
-              <Image
-                src={
-                  article.featuredImage
-                }
-                alt={
-                  article.title
-                }
-                fill
-                priority
-                sizes="(max-width: 1280px) 100vw, 1180px"
-                className="object-cover"
-              />
+            <div>
+
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+                The Venuvella take
+              </p>
+
+
+              <h2 className="display-serif mt-3 text-4xl leading-tight sm:text-5xl">
+                Why it made the edit.
+              </h2>
+
+
+              <p className="mt-5 max-w-md text-sm leading-7 text-[var(--muted)]">
+                A quick editorial read on what stands out
+                before you decide whether to visit a retailer.
+              </p>
+
+            </div>
+
+
+            <div className="grid gap-8">
+
+              {product.description && (
+                <div>
+
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.14em]">
+                    What stands out
+                  </h3>
+
+
+                  <p className="mt-4 max-w-3xl text-[17px] leading-8 text-[var(--muted)] sm:text-lg">
+                    {product.description}
+                  </p>
+
+                </div>
+              )}
+
+
+              {product.features.length >
+                0 && (
+                <div className="border-t border-[var(--line)] pt-7">
+
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.14em]">
+                    Key features
+                  </h3>
+
+
+                  <dl className="mt-5 divide-y divide-[var(--line)]">
+
+                    {product.features.map(
+                      (
+                        feature
+                      ) => (
+
+                        <div
+                          key={
+                            feature.id
+                          }
+                          className="grid gap-2 py-4 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)] sm:gap-8"
+                        >
+
+                          <dt className="text-sm font-semibold">
+                            {feature.label}
+                          </dt>
+
+
+                          <dd className="text-sm leading-6 text-[var(--muted)] sm:text-base sm:leading-7">
+                            {feature.value}
+                          </dd>
+
+                        </div>
+
+                      )
+                    )}
+
+                  </dl>
+
+                </div>
+              )}
 
             </div>
 
           </div>
-        )}
+
+        </section>
+      )}
 
 
-        {/* Reading layout */}
+      {/* Variants and retailer offers */}
 
-        <div className="container-shell mt-10 grid gap-12 lg:mt-14 lg:grid-cols-[220px_minmax(0,760px)_1fr] lg:items-start">
+      <section className="container-shell py-16 sm:py-20">
 
-          {/* Reading rail */}
+        <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
 
-          <aside className="hidden lg:block">
+          <div>
 
-            <div className="sticky top-28">
-
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-                In this story
-              </p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+              Before you go
+            </p>
 
 
-              {headingItems.length >
-              0 ? (
-                <nav
-                  aria-label="Article sections"
-                  className="mt-5 space-y-3 border-l border-[var(--line)] pl-4"
-                >
+            <h2 className="display-serif mt-3 text-4xl leading-tight sm:text-5xl">
+              Options and availability.
+            </h2>
 
-                  {headingItems.map(
+
+            <p className="mt-5 max-w-md text-sm leading-7 text-[var(--muted)]">
+              Review available variants and merchant
+              information before continuing to the retailer.
+            </p>
+
+
+            {product.variants.length >
+              0 && (
+              <div className="mt-8">
+
+                <p className="text-xs font-semibold uppercase tracking-[0.14em]">
+                  Available options
+                </p>
+
+
+                <div className="mt-4 flex flex-wrap gap-2">
+
+                  {product.variants.map(
                     (
-                      item
+                      variant
                     ) => (
 
-                      <a
+                      <span
                         key={
-                          item.id
+                          variant.id
                         }
-                        href={`#${item.anchor}`}
-                        className="block text-xs leading-5 text-[var(--muted)] transition hover:text-[var(--ink)]"
+                        className="inline-flex rounded-full border border-[var(--line)] bg-white px-4 py-2 text-sm"
                       >
-                        {item.text}
-                      </a>
+                        {variant.name}
+                      </span>
 
                     )
                   )}
 
-                </nav>
-              ) : (
-                <p className="mt-4 text-xs leading-5 text-[var(--muted)]">
-                  A concise Venuvella edit.
+                </div>
+
+              </div>
+            )}
+
+          </div>
+
+
+          <div>
+
+            <div className="flex items-end justify-between gap-4 border-b border-[var(--line)] pb-4">
+
+              <div>
+
+                <p className="text-xs font-semibold uppercase tracking-[0.14em]">
+                  Retailer information
                 </p>
-              )}
 
 
-              <div className="mt-8 border-t border-[var(--line)] pt-5">
-
-                <p className="text-xs leading-6 text-[var(--muted)]">
-                  Thoughtful editorial guidance,
-                  selected for usefulness and context.
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  {product.providerProducts.length >
+                  0
+                    ? `${product.providerProducts.length} available retailer ${
+                        product.providerProducts.length ===
+                        1
+                          ? "record"
+                          : "records"
+                      }`
+                    : "No retailer data currently available"}
                 </p>
 
               </div>
 
+
+              <ShoppingBag
+                aria-hidden="true"
+                size={
+                  20
+                }
+                className="text-[var(--muted)]"
+              />
+
             </div>
 
-          </aside>
+
+            {product.providerProducts.length >
+            0 ? (
+              <div className="divide-y divide-[var(--line)]">
+
+                {product.providerProducts.map(
+                  (
+                    offer
+                  ) => (
+
+                    <div
+                      key={
+                        offer.id
+                      }
+                      className="grid gap-4 py-5 sm:grid-cols-[1fr_auto_auto] sm:items-center sm:gap-8"
+                    >
+
+                      <div>
+
+                        <p className="text-base font-semibold">
+                          {offer.provider.name}
+                        </p>
 
 
-          {/* Article body */}
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          {normalizeAvailability(
+                            offer.availability
+                          )}
+                        </p>
 
-          <div className="min-w-0">
+                      </div>
 
-            {article.excerpt &&
-              article.subtitle && (
-                <p className="mb-10 border-l-2 border-[var(--accent)] pl-5 text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
-                  {article.excerpt}
+
+                      <div className="sm:text-right">
+
+                        <p className="text-xs uppercase tracking-[0.12em] text-[var(--muted)]">
+                          Listed price
+                        </p>
+
+
+                        <p className="mt-1 text-base font-semibold">
+                          {offer.price !==
+                          null
+                            ? formatPrice(
+                                offer.price,
+                                offer.currency
+                              )
+                            : "Check retailer"}
+                        </p>
+
+                      </div>
+
+
+                      <Link
+                        href={
+                          buildProviderGoHref(
+                            offer.provider.slug
+                          )
+                        }
+                        prefetch={
+                          false
+                        }
+                        className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-full border border-[var(--ink)] px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] transition hover:bg-[var(--ink)] hover:text-white"
+                      >
+                        Check retailer
+
+                        <ArrowRight
+                          size={
+                            12
+                          }
+                        />
+                      </Link>
+
+                    </div>
+
+                  )
+                )}
+
+              </div>
+            ) : (
+              <div className="py-8">
+
+                <p className="text-sm leading-6 text-[var(--muted)]">
+                  Retailer availability is currently unavailable.
+                  You can check back later for an updated destination.
                 </p>
-              )}
+
+              </div>
+            )}
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      {/* Affiliate context */}
+
+      <section className="container-shell">
+
+        <div className="rounded-2xl border border-[var(--line)] bg-[#efeee9] p-6 sm:p-8">
+
+          <div className="grid gap-6 md:grid-cols-[auto_1fr] md:items-start">
+
+            <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white">
+
+              <ShieldCheck
+                size={
+                  20
+                }
+              />
+
+            </div>
 
 
             <div>
 
-              {article.blocks.map(
-                (
-                  block,
-                  blockIndex
-                ) => {
-
-                  if (
-                    block.type ===
-                    "PRODUCT"
-                  ) {
-                    const productId =
-                      getProductId(
-                        block.data
-                      );
-
-
-                    if (
-                      !productId
-                    ) {
-                      return null;
-                    }
-
-
-                    const product =
-                      productMap.get(
-                        productId
-                      );
-
-
-                    if (
-                      !product
-                    ) {
-                      return (
-                        <aside
-                          key={
-                            block.id
-                          }
-                          className="my-10 rounded-2xl border border-[var(--line)] bg-[#efeee9] p-5"
-                        >
-
-                          <p className="text-sm leading-6 text-[var(--muted)]">
-                            This product is currently unavailable.
-                          </p>
-
-                        </aside>
-                      );
-                    }
-
-
-                    return (
-                      <section
-                        key={
-                          block.id
-                        }
-                        className="my-14 border-y border-[var(--line)] py-8"
-                      >
-
-                        <div className="mb-6">
-
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-                            Venuvella pick
-                          </p>
-
-
-                          <h2 className="display-serif mt-2 text-3xl leading-tight">
-                            From this story
-                          </h2>
-
-                        </div>
-
-
-                        <div className="max-w-sm">
-
-                          <ProductCard
-                            brand={
-                              product.brand
-                                ?.name ??
-                              "Venuvella"
-                            }
-                            name={
-                              product.name
-                            }
-                            summary={
-                              product.editorialSummary ??
-                              ""
-                            }
-                            image={
-                              product.images[0]
-                                ?.url ??
-                              "/placeholder.png"
-                            }
-                            slug={`${product.slug}?article=${encodeURIComponent(
-                              article.slug
-                            )}`}
-                          />
-
-                        </div>
-
-                      </section>
-                    );
-                  }
-
-
-                  if (
-                    block.type ===
-                    "PRODUCT_GRID"
-                  ) {
-                    const gridIds =
-                      getProductIds(
-                        block.data
-                      );
-
-
-                    const gridProducts =
-                      gridIds
-                        .map(
-                          (
-                            productId
-                          ) =>
-                            productMap.get(
-                              productId
-                            )
-                        )
-                        .filter(
-                          (
-                            product
-                          ): product is NonNullable<
-                            typeof product
-                          > =>
-                            Boolean(
-                              product
-                            )
-                        );
-
-
-                    if (
-                      gridProducts.length ===
-                      0
-                    ) {
-                      return (
-                        <aside
-                          key={
-                            block.id
-                          }
-                          className="my-10 rounded-2xl border border-[var(--line)] bg-[#efeee9] p-5"
-                        >
-
-                          <p className="text-sm leading-6 text-[var(--muted)]">
-                            These products are currently unavailable.
-                          </p>
-
-                        </aside>
-                      );
-                    }
-
-
-                    return (
-                      <section
-                        key={
-                          block.id
-                        }
-                        className="my-16 border-y border-[var(--line)] py-9"
-                      >
-
-                        <div className="mb-8">
-
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-                            Venuvella picks
-                          </p>
-
-
-                          <h2 className="display-serif mt-2 text-3xl leading-tight sm:text-4xl">
-                            Products from this story
-                          </h2>
-
-
-                          <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
-                            A short list of products connected to the ideas in this article.
-                          </p>
-
-                        </div>
-
-
-                        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2">
-
-                          {gridProducts.map(
-                            (
-                              product
-                            ) => (
-
-                              <ProductCard
-                                key={
-                                  product.id
-                                }
-                                brand={
-                                  product.brand
-                                    ?.name ??
-                                  "Venuvella"
-                                }
-                                name={
-                                  product.name
-                                }
-                                summary={
-                                  product.editorialSummary ??
-                                  ""
-                                }
-                                image={
-                                  product.images[0]
-                                    ?.url ??
-                                  "/placeholder.png"
-                                }
-                                slug={`${product.slug}?article=${encodeURIComponent(
-                                  article.slug
-                                )}`}
-                              />
-
-                            )
-                          )}
-
-                        </div>
-
-                      </section>
-                    );
-                  }
-
-
-                  const text =
-                    getBlockText(
-                      block.data
-                    );
-
-
-                  if (
-                    block.type ===
-                    "HEADING"
-                  ) {
-                    return (
-                      <h2
-                        key={
-                          block.id
-                        }
-                        id={
-                          headingAnchorMap.get(
-                            block.id
-                          ) ??
-                          createHeadingId(
-                            text,
-                            blockIndex
-                          )
-                        }
-                        className="display-serif scroll-mt-28 pb-1 pt-8 text-3xl leading-[1.08] tracking-[-0.02em] sm:text-4xl"
-                      >
-                        {text}
-                      </h2>
-                    );
-                  }
-
-
-                  if (
-                    block.type ===
-                    "QUOTE"
-                  ) {
-                    return (
-                      <blockquote
-                        key={
-                          block.id
-                        }
-                        className="display-serif my-10 border-l-2 border-[var(--accent)] pl-6 text-2xl leading-[1.25] tracking-[-0.015em] text-[var(--ink)] sm:text-3xl"
-                      >
-                        {text}
-                      </blockquote>
-                    );
-                  }
-
-
-                  if (
-                    block.type ===
-                    "BULLET_LIST"
-                  ) {
-                    const items =
-                      text
-                        .split(
-                          "\n"
-                        )
-                        .map(
-                          (
-                            item
-                          ) =>
-                            item.trim()
-                        )
-                        .filter(
-                          Boolean
-                        );
-
-
-                    return (
-                      <ul
-                        key={
-                          block.id
-                        }
-                        className="my-7 list-disc space-y-3 pl-6 text-[17px] leading-8 text-[var(--ink)] sm:text-lg"
-                      >
-
-                        {items.map(
-                          (
-                            item,
-                            index
-                          ) => (
-
-                            <li
-                              key={
-                                index
-                              }
-                            >
-                              {item}
-                            </li>
-
-                          )
-                        )}
-
-                      </ul>
-                    );
-                  }
-
-
-                  if (
-                    block.type ===
-                    "NUMBERED_LIST"
-                  ) {
-                    const items =
-                      text
-                        .split(
-                          "\n"
-                        )
-                        .map(
-                          (
-                            item
-                          ) =>
-                            item.trim()
-                        )
-                        .filter(
-                          Boolean
-                        );
-
-
-                    return (
-                      <ol
-                        key={
-                          block.id
-                        }
-                        className="my-7 list-decimal space-y-3 pl-6 text-[17px] leading-8 text-[var(--ink)] sm:text-lg"
-                      >
-
-                        {items.map(
-                          (
-                            item,
-                            index
-                          ) => (
-
-                            <li
-                              key={
-                                index
-                              }
-                            >
-                              {item}
-                            </li>
-
-                          )
-                        )}
-
-                      </ol>
-                    );
-                  }
-
-
-                  if (
-                    block.type ===
-                    "AFFILIATE_DISCLOSURE"
-                  ) {
-                    return (
-                      <aside
-                        key={
-                          block.id
-                        }
-                        className="my-9 rounded-2xl border border-[var(--line)] bg-[#efeee9] p-5 text-sm leading-6 text-[var(--muted)]"
-                      >
-                        {text}
-                      </aside>
-                    );
-                  }
-
-
-                  if (
-                    !text
-                  ) {
-                    return null;
-                  }
-
-
-                  return (
-                    <p
-                      key={
-                        block.id
-                      }
-                      className="my-6 text-[17px] leading-8 text-[var(--ink)] sm:text-[19px] sm:leading-9"
-                    >
-                      {text}
-                    </p>
-                  );
-                }
-              )}
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+                How Venuvella links work
+              </p>
+
+
+              <h2 className="display-serif mt-2 text-3xl">
+                Editorial discovery first.
+              </h2>
+
+
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--muted)]">
+                Venuvella is an editorial discovery platform,
+                not the retailer. Product prices, stock and
+                fulfillment are controlled by the merchant.
+                When an affiliate link is used, Venuvella may
+                earn a commission without increasing your price.
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      {/* Related products */}
+
+      {relatedProducts.length >
+        0 && (
+        <section className="container-shell mt-20 border-t border-[var(--line)] pt-14 sm:mt-24">
+
+          <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
+
+            <div>
+
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+                Keep exploring
+              </p>
+
+
+              <h2 className="display-serif mt-3 text-4xl tracking-[-0.025em] sm:text-5xl">
+                Related products
+              </h2>
 
             </div>
 
 
-            {relatedArticles.length >
-              0 && (
-              <section className="mt-16 border-t border-[var(--line)] pt-10">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-                  Related reading
-                </p>
+            <Link
+              href={`/products?category=${product.category.slug}`}
+              className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.13em]"
+            >
+              More in {product.category.name}
 
-                <h2 className="display-serif mt-3 text-3xl leading-tight sm:text-4xl">
-                  More from {article.category.name}
-                </h2>
-
-                <div className="mt-7 grid gap-4">
-                  {relatedArticles.map(
-                    (
-                      relatedArticle
-                    ) => (
-                      <Link
-                        key={
-                          relatedArticle.id
-                        }
-                        href={`/articles/${relatedArticle.slug}`}
-                        className="group rounded-2xl border border-[var(--line)] bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-sm"
-                      >
-                        <p className="text-lg font-semibold leading-7 group-hover:underline">
-                          {relatedArticle.title}
-                        </p>
-
-                        {relatedArticle.excerpt && (
-                          <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--muted)]">
-                            {relatedArticle.excerpt}
-                          </p>
-                        )}
-
-                        <span className="mt-4 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.13em]">
-                          Read article
-
-                          <ArrowRight
-                            size={
-                              13
-                            }
-                          />
-                        </span>
-                      </Link>
-                    )
-                  )}
-                </div>
-              </section>
-            )}
-
-
-            {/* End matter */}
-
-            <footer className="mt-16 border-t border-[var(--line)] pt-8">
-
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-                Continue exploring
-              </p>
-
-
-              <div className="mt-5 flex flex-wrap gap-3">
-
-                <Link
-                  href={`/${article.category.slug}`}
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[var(--ink)] px-6 py-3 text-[10px] font-semibold uppercase tracking-[0.13em] transition hover:bg-[var(--ink)] hover:text-white"
-                >
-                  More in {article.category.name}
-
-                  <ArrowRight
-                    size={
-                      13
-                    }
-                  />
-                </Link>
-
-
-                <Link
-                  href="/articles"
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[var(--ink)] px-6 py-3 text-[10px] font-semibold uppercase tracking-[0.13em] text-white"
-                >
-                  All articles
-
-                  <ArrowRight
-                    size={
-                      13
-                    }
-                  />
-                </Link>
-
-              </div>
-
-            </footer>
+              <ArrowRight
+                size={
+                  13
+                }
+              />
+            </Link>
 
           </div>
 
 
-          <div className="hidden lg:block" />
+          <div className="grid grid-cols-1 gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
+
+            {relatedProducts.map(
+              (
+                item
+              ) => (
+
+                <ProductCard
+                  key={
+                    item.id
+                  }
+                  brand={
+                    item.brand?.name ??
+                    "Venuvella"
+                  }
+                  name={
+                    item.name
+                  }
+                  summary={
+                    item.editorialSummary ??
+                    ""
+                  }
+                  image={
+                    item.images[0]
+                      ?.url ??
+                    "/placeholder.png"
+                  }
+                  slug={
+                    item.slug
+                  }
+                />
+
+              )
+            )}
+
+          </div>
+
+        </section>
+      )}
+
+
+
+      {/* Mobile conversion bar */}
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[var(--paper)]/95 px-4 py-3 shadow-[0_-10px_30px_rgba(32,33,31,0.08)] backdrop-blur sm:hidden">
+
+        <div className="mx-auto flex max-w-[1180px] items-center gap-3">
+
+          <div className="min-w-0 flex-1">
+
+            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+              {bestPrice
+                ? `From ${formatPrice(bestPrice.price!, bestPrice.currency)}`
+                : "Current retailer"}
+            </p>
+
+            <p className="mt-0.5 truncate text-xs font-semibold">
+              {bestPrice?.provider.name ?? product.name}
+            </p>
+
+          </div>
+
+          <Link
+            href={goHref}
+            prefetch={false}
+            className="inline-flex min-h-[46px] shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] !text-white"
+          >
+            <span className="text-white">
+              Check retailer
+            </span>
+
+            <ExternalLink
+              aria-hidden="true"
+              size={12}
+              className="text-white"
+            />
+          </Link>
 
         </div>
 
-      </article>
+        <p className="mx-auto mt-1.5 max-w-[1180px] text-right text-[9px] leading-4 text-[var(--muted)]">
+          Affiliate link · retailer price and availability may change
+        </p>
 
+      </div>
     </main>
   );
 }
+
+
+function TrustPoint({
+  icon,
+  title,
+  body,
+}: {
+  icon:
+    "edit" |
+    "shop" |
+    "shield";
+
+  title:
+    string;
+
+  body:
+    string;
+}) {
+  const Icon =
+    icon ===
+    "shop"
+      ? ShoppingBag
+      : icon ===
+          "shield"
+        ? ShieldCheck
+        : Sparkles;
+
+
+  return (
+    <div className="border-t border-[var(--line)] pt-4">
+
+      <Icon
+        aria-hidden="true"
+        size={
+          16
+        }
+        className="text-[var(--accent)]"
+      />
+
+
+      <p className="mt-3 text-sm font-semibold">
+        {title}
+      </p>
+
+
+      <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+        {body}
+      </p>
+
+    </div>
+  );
+}
+

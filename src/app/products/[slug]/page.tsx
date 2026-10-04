@@ -219,6 +219,9 @@ export default async function ProductDetailPage({
       article?:
         string;
 
+      placement?:
+        string;
+
       campaign?:
         string;
 
@@ -246,6 +249,13 @@ export default async function ProductDetailPage({
     typeof query.article ===
     "string"
       ? query.article
+      : null;
+
+
+  const placementKey =
+    typeof query.placement ===
+    "string"
+      ? query.placement
       : null;
 
 
@@ -314,6 +324,16 @@ export default async function ProductDetailPage({
     goParams.set(
       "article",
       articleSlug
+    );
+  }
+
+
+  if (
+    placementKey
+  ) {
+    goParams.set(
+      "placement",
+      placementKey
     );
   }
 
