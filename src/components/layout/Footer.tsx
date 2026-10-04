@@ -95,6 +95,65 @@ const editorialLinks = [
 ];
 
 
+const trustLinks = [
+  {
+    label:
+      "About",
+
+    href:
+      "/about",
+  },
+
+  {
+    label:
+      "Contact",
+
+    href:
+      "/contact",
+  },
+
+  {
+    label:
+      "Editorial Policy",
+
+    href:
+      "/editorial-policy",
+  },
+
+  {
+    label:
+      "Affiliate Disclosure",
+
+    href:
+      "/affiliate-disclosure",
+  },
+
+  {
+    label:
+      "Privacy",
+
+    href:
+      "/privacy",
+  },
+
+  {
+    label:
+      "Terms",
+
+    href:
+      "/terms",
+  },
+
+  {
+    label:
+      "Cookie Policy",
+
+    href:
+      "/cookies",
+  },
+];
+
+
 export function Footer() {
   return (
     <footer className="mt-20 border-t border-[var(--line)] bg-[#efeee9]">
@@ -113,7 +172,9 @@ export function Footer() {
 
 
           <p className="mt-5 max-w-sm text-base leading-7 text-[var(--muted)]">
-            Thoughtful editorial discovery across beauty, home, fitness and style.
+            Thoughtful editorial discovery
+            across beauty, home, fitness
+            and style.
           </p>
 
 
@@ -125,12 +186,15 @@ export function Footer() {
 
 
             <h2 className="display-serif mt-2 text-3xl leading-tight">
-              A little inspiration, delivered.
+              A little inspiration,
+              delivered.
             </h2>
 
 
             <div className="mt-5">
+
               <NewsletterForm />
+
             </div>
 
           </div>
@@ -138,7 +202,7 @@ export function Footer() {
         </div>
 
 
-        <div className="grid gap-10 sm:grid-cols-2">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
 
           <div>
 
@@ -209,6 +273,41 @@ export function Footer() {
 
           </div>
 
+
+          <div>
+
+            <p className="text-[11px] font-semibold uppercase tracking-[0.17em] text-[var(--accent)]">
+              Venuvella
+            </p>
+
+
+            <nav
+              aria-label="Footer company and legal navigation"
+              className="mt-5 grid gap-3"
+            >
+
+              {trustLinks.map(
+                (
+                  link
+                ) => (
+                  <Link
+                    key={
+                      link.href
+                    }
+                    href={
+                      link.href
+                    }
+                    className="w-fit text-sm text-[var(--muted)] transition hover:text-[var(--ink)]"
+                  >
+                    {link.label}
+                  </Link>
+                )
+              )}
+
+            </nav>
+
+          </div>
+
         </div>
 
       </div>
@@ -216,16 +315,40 @@ export function Footer() {
 
       <div className="border-t border-[var(--line)]">
 
-        <div className="container-shell flex flex-col gap-2 py-5 text-[11px] text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="container-shell flex flex-col gap-4 py-5 text-[11px] text-[var(--muted)] md:flex-row md:items-center md:justify-between">
 
           <span>
-            © 2026 Venuvella. All rights reserved.
+            © 2026 Venuvella. All rights
+            reserved.
           </span>
 
 
-          <span>
-            Beauty · Home · Fitness · Style
-          </span>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+
+            <Link
+              href="/privacy"
+              className="transition hover:text-[var(--ink)]"
+            >
+              Privacy
+            </Link>
+
+
+            <Link
+              href="/terms"
+              className="transition hover:text-[var(--ink)]"
+            >
+              Terms
+            </Link>
+
+
+            <Link
+              href="/affiliate-disclosure"
+              className="transition hover:text-[var(--ink)]"
+            >
+              Affiliate Disclosure
+            </Link>
+
+          </div>
 
         </div>
 

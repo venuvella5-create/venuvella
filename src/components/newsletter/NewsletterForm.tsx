@@ -10,6 +10,8 @@ import {
   LoaderCircle,
 } from "lucide-react";
 
+import Link from "next/link";
+
 
 type NewsletterFormProps = {
   theme?:
@@ -339,7 +341,7 @@ export function NewsletterForm({
             {status ===
             "loading"
               ? "Joining..."
-              : "Get the Edit"}
+              : "Join the Edit"}
           </span>
 
         </button>
@@ -354,7 +356,17 @@ export function NewsletterForm({
             : "mt-3 text-[11px] leading-5 text-[var(--muted)]"
         }
       >
-        By subscribing, you agree to receive Venuvella editorial emails. You can unsubscribe at any time.
+        A considered mix of editorial ideas, product discoveries and useful updates. By subscribing, you agree to receive Venuvella emails and can unsubscribe at any time.{" "}
+        <Link
+          href="/privacy"
+          className={
+            dark
+              ? "underline underline-offset-4 text-white/70 hover:text-white"
+              : "underline underline-offset-4 text-[var(--ink)] hover:opacity-70"
+          }
+        >
+          Privacy Policy
+        </Link>
       </p>
 
 

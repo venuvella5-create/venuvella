@@ -1,4 +1,5 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
+import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -19,6 +20,12 @@ import {
   getProductBySlug,
   getRelatedProducts,
 } from "@/lib/products/queries";
+
+
+const getCachedProductBySlug =
+  cache(
+    getProductBySlug
+  );
 
 
 export const dynamic =
@@ -114,7 +121,7 @@ export async function generateMetadata({
 
 
   const product =
-    await getProductBySlug(
+    await getCachedProductBySlug(
       slug
     );
 
@@ -271,7 +278,7 @@ export default async function ProductDetailPage({
 
 
   const product =
-    await getProductBySlug(
+    await getCachedProductBySlug(
       slug
     );
 
@@ -525,7 +532,7 @@ export default async function ProductDetailPage({
 
 
   return (
-    <main className="pb-20 sm:pb-28">
+    <main className="pb-32 sm:pb-28">
 
       <script
         type="application/ld+json"
@@ -753,7 +760,7 @@ export default async function ProductDetailPage({
               className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-8 py-4 text-[11px] font-semibold uppercase tracking-[0.14em] !text-white transition hover:opacity-90 sm:w-auto"
             >
               <span className="text-white">
-                See current retailer
+                Check price at retailer
               </span>
 
               <ExternalLink
@@ -766,9 +773,14 @@ export default async function ProductDetailPage({
 
 
             <p className="mt-4 max-w-xl text-xs leading-6 text-[var(--muted)]">
-              Disclosure: Venuvella may earn a commission
-              when you purchase through links on our site,
-              at no additional cost to you.
+              Disclosure: Venuvella may earn a commission when you purchase
+              through links on our site, at no additional cost to you.{" "}
+              <Link
+                href="/affiliate-disclosure"
+                className="font-semibold text-[var(--ink)] underline underline-offset-4"
+              >
+                Learn more
+              </Link>.
             </p>
 
           </div>
@@ -1033,7 +1045,7 @@ export default async function ProductDetailPage({
                         }
                         className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-full border border-[var(--ink)] px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] transition hover:bg-[var(--ink)] hover:text-white"
                       >
-                        Visit retailer
+                        Check retailer
 
                         <ArrowRight
                           size={
@@ -1192,6 +1204,51 @@ export default async function ProductDetailPage({
         </section>
       )}
 
+
+
+      {/* Mobile conversion bar */}
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[var(--paper)]/95 px-4 py-3 shadow-[0_-10px_30px_rgba(32,33,31,0.08)] backdrop-blur sm:hidden">
+
+        <div className="mx-auto flex max-w-[1180px] items-center gap-3">
+
+          <div className="min-w-0 flex-1">
+
+            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+              {bestPrice
+                ? `From ${formatPrice(bestPrice.price!, bestPrice.currency)}`
+                : "Current retailer"}
+            </p>
+
+            <p className="mt-0.5 truncate text-xs font-semibold">
+              {bestPrice?.provider.name ?? product.name}
+            </p>
+
+          </div>
+
+          <Link
+            href={goHref}
+            prefetch={false}
+            className="inline-flex min-h-[46px] shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] !text-white"
+          >
+            <span className="text-white">
+              Check retailer
+            </span>
+
+            <ExternalLink
+              aria-hidden="true"
+              size={12}
+              className="text-white"
+            />
+          </Link>
+
+        </div>
+
+        <p className="mx-auto mt-1.5 max-w-[1180px] text-right text-[9px] leading-4 text-[var(--muted)]">
+          Affiliate link · retailer price and availability may change
+        </p>
+
+      </div>
     </main>
   );
 }

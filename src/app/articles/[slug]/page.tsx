@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,15 +16,35 @@ import {
 
 import {
   getArticleBySlug,
+  getPublishedArticleSlugs,
 } from "@/lib/content/articles";
+
+const getCachedArticleBySlug =
+  cache(
+    getArticleBySlug
+  );
+
 
 import {
   prisma,
 } from "@/lib/db/prisma";
 
 
-export const dynamic =
-  "force-dynamic";
+export const revalidate =
+  300;
+
+
+export async function generateStaticParams() {
+  const slugs =
+    await getPublishedArticleSlugs();
+
+
+  return slugs.map(
+    (slug) => ({
+      slug,
+    })
+  );
+}
 
 
 function getBlockText(
@@ -260,7 +281,7 @@ export async function generateMetadata({
 
 
   const article =
-    await getArticleBySlug(
+    await getCachedArticleBySlug(
       slug
     );
 
@@ -367,7 +388,7 @@ export default async function ArticlePage({
 
 
   const article =
-    await getArticleBySlug(
+    await getCachedArticleBySlug(
       slug
     );
 

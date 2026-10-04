@@ -11,7 +11,7 @@ import { NewsletterForm } from "@/components/newsletter/NewsletterForm";
 import { getPublishedArticles } from "@/lib/content/articles";
 import { getPublishedProducts } from "@/lib/content/products";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const fallbackArticles = [
   {

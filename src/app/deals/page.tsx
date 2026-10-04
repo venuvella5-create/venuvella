@@ -215,11 +215,10 @@ export default async function DealsPage() {
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
 
-              A price-aware edit
-              of products currently
-              carrying retailer
-              pricing across the
-              Venuvella catalog.
+              A price-aware edit of products
+              with current retailer pricing,
+              selected to make comparison
+              easier before you shop.
 
             </p>
 
@@ -372,7 +371,7 @@ export default async function DealsPage() {
 
                 <div className="mt-7 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.13em]">
 
-                  View product
+                  Review product & retailer options
 
                   <ArrowRight
                     aria-hidden="true"
@@ -539,7 +538,7 @@ export default async function DealsPage() {
 
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.11em]">
 
-                            Explore
+                            Compare options
 
                             <ArrowRight
                               aria-hidden="true"

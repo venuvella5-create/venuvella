@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+
 :root {
   --ink: #20211f;
   --muted: #696b66;
@@ -10,31 +11,201 @@
   --accent: #9b735c;
 }
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
-a { color: inherit; text-decoration: none; }
-button, input { font: inherit; }
-::selection { background: #ded6cc; color: var(--ink); }
 
-.display-serif { font-family: Georgia, "Times New Roman", serif; }
-.container-shell { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 
-@media (max-width: 640px) {
-  .container-shell { width: min(100% - 28px, 1180px); }
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+
+  ::selection {
+    background: #ded6cc;
+    color: var(--ink);
+  }
 }
 
-.admin-label { display:block; margin-bottom:0.45rem; font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
-.admin-eyebrow { font-size:10px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); }
-.admin-input { width:100%; border:1px solid var(--line); border-radius:12px; background:white; padding:.75rem .9rem; color:var(--ink); outline:none; }
-.admin-input:focus { border-color:var(--ink); box-shadow:0 0 0 2px rgba(32,33,31,.06); }
-.admin-primary { display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:999px; background:var(--ink); padding:.78rem 1.15rem; color:white; font-size:10px; font-weight:700; letter-spacing:.13em; text-transform:uppercase; }
-.admin-secondary { display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--ink); border-radius:999px; background:transparent; padding:.7rem 1rem; font-size:10px; font-weight:700; letter-spacing:.13em; text-transform:uppercase; }
-.admin-danger { border:1px solid #c9b5aa; border-radius:999px; padding:.55rem .8rem; color:#8a5845; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
-.admin-link { font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
-.admin-badge { display:inline-flex; width:max-content; border:1px solid var(--line); border-radius:999px; padding:.3rem .55rem; font-size:9px; font-weight:700; letter-spacing:.1em; }
-.admin-success { border:1px solid #b8cbbd; background:#edf5ef; padding:.75rem 1rem; font-size:13px; }
-.admin-error { border:1px solid #d8b9b0; background:#fbefec; padding:.75rem 1rem; font-size:13px; }
-.prose-venuvella p { margin-top:1.2rem; line-height:1.85; color:var(--muted); }
-.prose-venuvella h2 { margin-top:2.5rem; font-family:Georgia, "Times New Roman", serif; font-size:2.2rem; line-height:1.05; }
-.prose-venuvella blockquote { margin:2rem 0; border-left:2px solid var(--accent); padding-left:1.2rem; font-family:Georgia, "Times New Roman", serif; font-size:1.5rem; line-height:1.35; }
+
+.display-serif {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+
+.container-shell {
+  width: min(1180px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+
+@media (max-width: 640px) {
+  .container-shell {
+    width: min(100% - 28px, 1180px);
+  }
+}
+
+
+.admin-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+
+.admin-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+
+.admin-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  padding: 0.75rem 0.9rem;
+  color: var(--ink);
+  outline: none;
+}
+
+
+.admin-input:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px rgba(32, 33, 31, 0.06);
+}
+
+
+.admin-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  padding: 0.78rem 1.15rem;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+
+.admin-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  padding: 0.7rem 1rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+
+.admin-danger {
+  border: 1px solid #c9b5aa;
+  border-radius: 999px;
+  padding: 0.55rem 0.8rem;
+  color: #8a5845;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+
+.admin-link {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+
+.admin-badge {
+  display: inline-flex;
+  width: max-content;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.3rem 0.55rem;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+
+.admin-success {
+  border: 1px solid #b8cbbd;
+  background: #edf5ef;
+  padding: 0.75rem 1rem;
+  font-size: 13px;
+}
+
+
+.admin-error {
+  border: 1px solid #d8b9b0;
+  background: #fbefec;
+  padding: 0.75rem 1rem;
+  font-size: 13px;
+}
+
+
+.prose-venuvella p {
+  margin-top: 1.2rem;
+  line-height: 1.85;
+  color: var(--muted);
+}
+
+
+.prose-venuvella h2 {
+  margin-top: 2.5rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.2rem;
+  line-height: 1.05;
+}
+
+
+.prose-venuvella blockquote {
+  margin: 2rem 0;
+  border-left: 2px solid var(--accent);
+  padding-left: 1.2rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.5rem;
+  line-height: 1.35;
+}
+/*
+ * Ensure white-text utility remains visible on dark CTA links.
+ * Kept outside Tailwind layers intentionally so it wins the cascade.
+ */
+.text-white {
+  color: #ffffff !important;
+}

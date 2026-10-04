@@ -658,6 +658,12 @@ const params =
 
     campaignGroups,
 
+    categoryGroups,
+
+    categorizedClicks,
+
+    deviceAttributedClicks,
+
     recentClicks,
 
     desktopClicks,
@@ -1073,6 +1079,98 @@ const params =
       },
 
       take: 10,
+
+    }),
+
+    /*
+
+     * Categories
+
+     */
+
+    prisma.affiliateClick.groupBy({
+
+      by: [
+
+        "category",
+
+      ],
+
+      where: {
+
+        ...clickWhere,
+
+        category: {
+
+          not: null,
+
+        },
+
+      },
+
+      _count: {
+
+        _all: true,
+
+      },
+
+      orderBy: {
+
+        _count: {
+
+          category:
+
+            "desc",
+
+        },
+
+      },
+
+      take: 10,
+
+    }),
+
+    /*
+
+     * Category tracking coverage
+
+     */
+
+    prisma.affiliateClick.count({
+
+      where: {
+
+        ...clickWhere,
+
+        category: {
+
+          not: null,
+
+        },
+
+      },
+
+    }),
+
+    /*
+
+     * Device tracking coverage
+
+     */
+
+    prisma.affiliateClick.count({
+
+      where: {
+
+        ...clickWhere,
+
+        deviceType: {
+
+          not: null,
+
+        },
+
+      },
 
     }),
 
@@ -1688,6 +1786,32 @@ const params =
         )
 
       : null;
+
+
+  const uncategorizedClicks =
+
+    Math.max(
+
+      0,
+
+      totalClicks -
+
+      categorizedClicks
+
+    );
+
+
+  const unknownDeviceClicks =
+
+    Math.max(
+
+      0,
+
+      totalClicks -
+
+      deviceAttributedClicks
+
+    );
 
   /*
 
@@ -2525,19 +2649,42 @@ const params =
 
                         </p>
 
-                        <strong>
+                        <div className="text-right">
 
-                          {
+                          <strong>
 
-                            group
+                            {
 
-                              ._count
+                              group
 
-                              ._all
+                                ._count
 
-                          }
+                                ._all
 
-                        </strong>
+                            }
+
+                          </strong>
+
+
+                          <p className="mt-1 text-xs text-[var(--muted)]">
+
+                            {
+
+                              percentage(
+
+                                group._count._all,
+
+                                totalClicks
+
+                              )
+
+                            }
+
+                            % of clicks
+
+                          </p>
+
+                        </div>
 
                       </div>
 
@@ -2657,19 +2804,42 @@ const params =
 
                         )}
 
-                        <strong>
+                        <div className="text-right">
 
-                          {
+                          <strong>
 
-                            group
+                            {
 
-                              ._count
+                              group
 
-                              ._all
+                                ._count
 
-                          }
+                                ._all
 
-                        </strong>
+                            }
+
+                          </strong>
+
+
+                          <p className="mt-1 text-xs text-[var(--muted)]">
+
+                            {
+
+                              percentage(
+
+                                group._count._all,
+
+                                totalClicks
+
+                              )
+
+                            }
+
+                            % of clicks
+
+                          </p>
+
+                        </div>
 
                       </div>
 
@@ -2688,6 +2858,278 @@ const params =
                 </p>
 
               )}
+
+            </div>
+
+          </div>
+
+        </section>
+
+        {/* Category intelligence + tracking health */}
+
+        <section className="mt-8 grid gap-8 xl:grid-cols-2">
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
+
+            <p className="admin-eyebrow">
+
+              Category performance
+
+            </p>
+
+            <h2 className="display-serif mt-2 text-3xl">
+
+              Top categories
+
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+
+              Category attribution is recorded on newer affiliate clicks.
+              Historical clicks without category data remain visible in the
+              tracking-health panel.
+
+            </p>
+
+            <div className="mt-6 divide-y divide-[var(--line)]">
+
+              {categoryGroups.length > 0 ? (
+
+                categoryGroups.map(
+
+                  (
+
+                    group,
+
+                    index
+
+                  ) => (
+
+                    <div
+
+                      key={
+
+                        group.category ??
+
+                        "uncategorized"
+
+                      }
+
+                      className="flex items-center justify-between gap-4 py-4"
+
+                    >
+
+                      <div>
+
+                        <p className="font-medium">
+
+                          {index + 1}.{" "}
+
+                          {
+
+                            group.category ??
+
+                            "Uncategorized"
+
+                          }
+
+                        </p>
+
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+
+                          {
+
+                            percentage(
+
+                              group._count._all,
+
+                              totalClicks
+
+                            )
+
+                          }
+
+                          % of clicks
+
+                        </p>
+
+                      </div>
+
+                      <strong>
+
+                        {
+
+                          group._count._all
+
+                        }
+
+                      </strong>
+
+                    </div>
+
+                  )
+
+                )
+
+              ) : (
+
+                <div className="py-6">
+
+                  <p className="text-sm text-[var(--muted)]">
+
+                    No category-attributed clicks are available for this period.
+
+                  </p>
+
+                </div>
+
+              )}
+
+            </div>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
+
+            <p className="admin-eyebrow">
+
+              Tracking health
+
+            </p>
+
+            <h2 className="display-serif mt-2 text-3xl">
+
+              Attribution coverage
+
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+
+              Coverage shows how much of the selected click activity contains
+              the newer affiliate-intelligence fields.
+
+            </p>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--paper)] p-4">
+
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+
+                  Category coverage
+
+                </p>
+
+                <p className="mt-3 text-3xl font-semibold">
+
+                  {
+
+                    percentage(
+
+                      categorizedClicks,
+
+                      totalClicks
+
+                    )
+
+                  }
+
+                  %
+
+                </p>
+
+                <p className="mt-2 text-xs text-[var(--muted)]">
+
+                  {categorizedClicks} categorized · {uncategorizedClicks} without category
+
+                </p>
+
+              </div>
+
+
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--paper)] p-4">
+
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+
+                  Device coverage
+
+                </p>
+
+                <p className="mt-3 text-3xl font-semibold">
+
+                  {
+
+                    percentage(
+
+                      deviceAttributedClicks,
+
+                      totalClicks
+
+                    )
+
+                  }
+
+                  %
+
+                </p>
+
+                <p className="mt-2 text-xs text-[var(--muted)]">
+
+                  {deviceAttributedClicks} identified · {unknownDeviceClicks} unknown
+
+                </p>
+
+              </div>
+
+
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--paper)] p-4 sm:col-span-2">
+
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+
+                  Editorial attribution
+
+                </p>
+
+                <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+
+                  <div>
+
+                    <p className="text-3xl font-semibold">
+
+                      {
+
+                        percentage(
+
+                          editorialClicks,
+
+                          totalClicks
+
+                        )
+
+                      }
+
+                      %
+
+                    </p>
+
+                    <p className="mt-2 text-xs text-[var(--muted)]">
+
+                      {editorialClicks} article-driven clicks in the selected period
+
+                    </p>
+
+                  </div>
+
+                  <p className="text-xs text-[var(--muted)]">
+
+                    Product/direct: {nonEditorialClicks}
+
+                  </p>
+
+                </div>
+
+              </div>
 
             </div>
 
@@ -3499,6 +3941,12 @@ const params =
 
                     <th className="px-3 py-3">
 
+                      Category
+
+                    </th>
+
+                    <th className="px-3 py-3">
+
                       Article
 
                     </th>
@@ -3598,6 +4046,18 @@ const params =
                             click.provider
 
                               ?.name ??
+
+                            "—"
+
+                          }
+
+                        </td>
+
+                        <td className="px-3 py-4 text-xs capitalize">
+
+                          {
+
+                            click.category ??
 
                             "—"
 

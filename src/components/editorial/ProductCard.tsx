@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 
 export function ProductCard({
@@ -85,6 +86,8 @@ export function ProductCard({
           <span className="
             mt-5
             inline-flex
+            items-center
+            gap-2
             border-b
             border-[var(--ink)]
             pb-1
@@ -93,7 +96,12 @@ export function ProductCard({
             uppercase
             tracking-[0.15em]
           ">
-            View product
+            Explore product
+            <ArrowRight
+              aria-hidden="true"
+              size={11}
+              className="transition-transform group-hover:translate-x-1"
+            />
           </span>
 
         </div>
