@@ -421,6 +421,14 @@ export default async function NewsletterAdminPage({
 
 
             <Link
+              href="/admin/newsletter/campaigns"
+              className="admin-secondary"
+            >
+              Campaigns
+            </Link>
+
+
+            <Link
               href={
                 exportHref
               }

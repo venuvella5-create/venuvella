@@ -676,6 +676,14 @@ const params =
 
     nonEditorialClicks,
 
+    newsletterClicks,
+
+    newsletterEditorialClicks,
+
+    articleProductGroups,
+
+    providerProductGroups,
+
     trendClicks,
 
     previousTotalClicks,
@@ -1336,6 +1344,220 @@ const params =
 
     /*
 
+     * Newsletter-attributed retailer clicks
+
+     */
+
+    prisma.affiliateClick.count({
+
+      where: {
+
+        ...clickWhere,
+
+        OR: [
+
+          {
+
+            utmSource:
+
+              "newsletter",
+
+          },
+
+          {
+
+            utmMedium:
+
+              "email",
+
+          },
+
+          {
+
+            campaign: {
+
+              startsWith:
+
+                "edit-",
+
+            },
+
+          },
+
+        ],
+
+      },
+
+    }),
+
+    /*
+
+     * Newsletter clicks with editorial attribution
+
+     */
+
+    prisma.affiliateClick.count({
+
+      where: {
+
+        ...clickWhere,
+
+        articleId: {
+
+          not: null,
+
+        },
+
+        OR: [
+
+          {
+
+            utmSource:
+
+              "newsletter",
+
+          },
+
+          {
+
+            utmMedium:
+
+              "email",
+
+          },
+
+          {
+
+            campaign: {
+
+              startsWith:
+
+                "edit-",
+
+            },
+
+          },
+
+        ],
+
+      },
+
+    }),
+
+    /*
+
+     * Article → product paths
+
+     */
+
+    prisma.affiliateClick.groupBy({
+
+      by: [
+
+        "articleId",
+
+        "productId",
+
+      ],
+
+      where: {
+
+        ...clickWhere,
+
+        articleId: {
+
+          not: null,
+
+        },
+
+        productId: {
+
+          not: null,
+
+        },
+
+      },
+
+      _count: {
+
+        _all: true,
+
+      },
+
+      orderBy: {
+
+        _count: {
+
+          articleId:
+
+            "desc",
+
+        },
+
+      },
+
+      take: 10,
+
+    }),
+
+    /*
+
+     * Provider → product paths
+
+     */
+
+    prisma.affiliateClick.groupBy({
+
+      by: [
+
+        "providerId",
+
+        "productId",
+
+      ],
+
+      where: {
+
+        ...clickWhere,
+
+        providerId: {
+
+          not: null,
+
+        },
+
+        productId: {
+
+          not: null,
+
+        },
+
+      },
+
+      _count: {
+
+        _all: true,
+
+      },
+
+      orderBy: {
+
+        _count: {
+
+          providerId:
+
+            "desc",
+
+        },
+
+      },
+
+      take: 10,
+
+    }),
+
+    /*
+
      * Trend dates
 
      */
@@ -1463,27 +1685,43 @@ const params =
 
   const providerIds =
 
-    providerGroups
+    Array.from(
 
-      .map(
+      new Set(
 
-        (group) =>
+        [
 
-          group.providerId
+          ...providerGroups.map(
+
+            (group) =>
+
+              group.providerId
+
+          ),
+
+          ...providerProductGroups.map(
+
+            (group) =>
+
+              group.providerId
+
+          ),
+
+        ].filter(
+
+          (
+
+            id
+
+          ): id is string =>
+
+            Boolean(id)
+
+        )
 
       )
 
-      .filter(
-
-        (
-
-          id
-
-        ): id is string =>
-
-          Boolean(id)
-
-      );
+    );
 
   /*
 
@@ -1493,27 +1731,51 @@ const params =
 
   const productIds =
 
-    productGroups
+    Array.from(
 
-      .map(
+      new Set(
 
-        (group) =>
+        [
 
-          group.productId
+          ...productGroups.map(
+
+            (group) =>
+
+              group.productId
+
+          ),
+
+          ...articleProductGroups.map(
+
+            (group) =>
+
+              group.productId
+
+          ),
+
+          ...providerProductGroups.map(
+
+            (group) =>
+
+              group.productId
+
+          ),
+
+        ].filter(
+
+          (
+
+            id
+
+          ): id is string =>
+
+            Boolean(id)
+
+        )
 
       )
 
-      .filter(
-
-        (
-
-          id
-
-        ): id is string =>
-
-          Boolean(id)
-
-      );
+    );
 
   /*
 
@@ -1523,27 +1785,43 @@ const params =
 
   const articleIds =
 
-    articleGroups
+    Array.from(
 
-      .map(
+      new Set(
 
-        (group) =>
+        [
 
-          group.articleId
+          ...articleGroups.map(
+
+            (group) =>
+
+              group.articleId
+
+          ),
+
+          ...articleProductGroups.map(
+
+            (group) =>
+
+              group.articleId
+
+          ),
+
+        ].filter(
+
+          (
+
+            id
+
+          ): id is string =>
+
+            Boolean(id)
+
+        )
 
       )
 
-      .filter(
-
-        (
-
-          id
-
-        ): id is string =>
-
-          Boolean(id)
-
-      );
+    );
 
   const [
 
@@ -1813,6 +2091,330 @@ const params =
 
     );
 
+  const newsletterShare =
+
+    percentage(
+
+      newsletterClicks,
+
+      totalClicks
+
+    );
+
+
+  const newsletterEditorialShare =
+
+    percentage(
+
+      newsletterEditorialClicks,
+
+      newsletterClicks
+
+    );
+
+
+  const topProviderClickShare =
+
+    providerGroups[0]
+
+      ? Number(
+
+          percentage(
+
+            providerGroups[0]._count._all,
+
+            totalClicks
+
+          )
+
+        )
+
+      : 0;
+
+
+  const topProductClickShare =
+
+    productGroups[0]
+
+      ? Number(
+
+          percentage(
+
+            productGroups[0]._count._all,
+
+            totalClicks
+
+          )
+
+        )
+
+      : 0;
+
+
+  const optimizationSignals: {
+
+    title: string;
+
+    detail: string;
+
+    tone:
+
+      | "positive"
+
+      | "watch"
+
+      | "neutral";
+
+  }[] = [];
+
+
+  if (
+
+    totalClicks === 0
+
+  ) {
+
+    optimizationSignals.push({
+
+      title:
+
+        "Build the first retailer-intent baseline",
+
+      detail:
+
+        "No outbound retailer clicks are recorded for this period yet. Publish and promote a small set of strong buying guides before making optimization decisions.",
+
+      tone:
+
+        "neutral",
+
+    });
+
+  } else {
+
+    if (
+
+      articleProductGroups.length >
+
+      0
+
+    ) {
+
+      const topPath =
+
+        articleProductGroups[0];
+
+
+      const article =
+
+        topPath.articleId
+
+          ? articleMap.get(
+
+              topPath.articleId
+
+            )
+
+          : null;
+
+
+      const product =
+
+        topPath.productId
+
+          ? productMap.get(
+
+              topPath.productId
+
+            )
+
+          : null;
+
+
+      optimizationSignals.push({
+
+        title:
+
+          "Protect the strongest editorial path",
+
+        detail:
+
+          `${article?.title ?? "An article"} → ${product?.name ?? "a product"} generated ${topPath._count._all} retailer click${topPath._count._all === 1 ? "" : "s"} in this period. Keep the recommendation accurate, available and editorially useful.`,
+
+        tone:
+
+          "positive",
+
+      });
+
+    }
+
+
+    if (
+
+      topProviderClickShare >=
+
+      70
+
+    ) {
+
+      optimizationSignals.push({
+
+        title:
+
+          "Provider concentration is high",
+
+        detail:
+
+          `${topProviderClickShare.toFixed(1)}% of recorded retailer clicks went to the leading provider. Review provider coverage on high-interest products so Venuvella is not overly dependent on one destination.`,
+
+        tone:
+
+          "watch",
+
+      });
+
+    } else if (
+
+      providerGroups.length >
+
+      1
+
+    ) {
+
+      optimizationSignals.push({
+
+        title:
+
+          "Retailer interest is distributed",
+
+        detail:
+
+          `The leading provider accounts for ${topProviderClickShare.toFixed(1)}% of retailer clicks. Continue comparing provider availability and destination quality rather than optimizing for click volume alone.`,
+
+        tone:
+
+          "positive",
+
+      });
+
+    }
+
+
+    if (
+
+      newsletterClicks >
+
+      0
+
+    ) {
+
+      optimizationSignals.push({
+
+        title:
+
+          "Newsletter attribution is working",
+
+        detail:
+
+          `${newsletterClicks} retailer click${newsletterClicks === 1 ? "" : "s"} (${newsletterShare}%) were attributed to newsletter/email traffic; ${newsletterEditorialShare}% of those retained article attribution.`,
+
+        tone:
+
+          "positive",
+
+      });
+
+    } else {
+
+      optimizationSignals.push({
+
+        title:
+
+          "Newsletter retailer intent has not started yet",
+
+        detail:
+
+          "No newsletter-attributed retailer clicks are recorded for this period. That is expected until production newsletter sending is active; keep the campaign UTM convention when it launches.",
+
+        tone:
+
+          "neutral",
+
+      });
+
+    }
+
+
+    if (
+
+      uncategorizedClicks >
+
+      0
+
+    ) {
+
+      optimizationSignals.push({
+
+        title:
+
+          "Finish category attribution rollout",
+
+        detail:
+
+          `${uncategorizedClicks} click${uncategorizedClicks === 1 ? "" : "s"} in this period lack category attribution. Keep historical data visible, but use newer fully-attributed clicks for category decisions.`,
+
+        tone:
+
+          "watch",
+
+      });
+
+    }
+
+
+    if (
+
+      editorialClicks === 0 &&
+
+      totalClicks >
+
+      0
+
+    ) {
+
+      optimizationSignals.push({
+
+        title:
+
+          "Editorial product paths need testing",
+
+        detail:
+
+          "Retailer activity exists, but none of the selected-period clicks are attributed to articles. Test contextual product blocks in relevant buying guides rather than adding links indiscriminately.",
+
+        tone:
+
+          "watch",
+
+      });
+
+    }
+
+  }
+
+
+  const visibleSignals =
+
+    optimizationSignals.slice(
+
+      0,
+
+      4
+
+    );
+
+
   /*
 
    * Range navigation.
@@ -1993,7 +2595,205 @@ const params =
 
               </p>
 
-              {previousRangeLabel && (
+              <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
+
+            <p className="admin-eyebrow">
+
+              Newsletter intent
+
+            </p>
+
+            <p className="mt-4 text-4xl font-semibold tracking-tight">
+
+              {newsletterClicks}
+
+            </p>
+
+            <p className="mt-2 text-sm text-[var(--muted)]">
+
+              {newsletterShare}% of recorded retailer clicks
+
+            </p>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
+
+            <p className="admin-eyebrow">
+
+              Newsletter editorial
+
+            </p>
+
+            <p className="mt-4 text-4xl font-semibold tracking-tight">
+
+              {newsletterEditorialShare}%
+
+            </p>
+
+            <p className="mt-2 text-sm text-[var(--muted)]">
+
+              Newsletter clicks retaining article attribution
+
+            </p>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
+
+            <p className="admin-eyebrow">
+
+              Provider concentration
+
+            </p>
+
+            <p className="mt-4 text-4xl font-semibold tracking-tight">
+
+              {topProviderClickShare.toFixed(
+
+                1
+
+              )}
+
+              %
+
+            </p>
+
+            <p className="mt-2 text-sm text-[var(--muted)]">
+
+              Share of clicks to the leading provider
+
+            </p>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
+
+            <p className="admin-eyebrow">
+
+              Product concentration
+
+            </p>
+
+            <p className="mt-4 text-4xl font-semibold tracking-tight">
+
+              {topProductClickShare.toFixed(
+
+                1
+
+              )}
+
+              %
+
+            </p>
+
+            <p className="mt-2 text-sm text-[var(--muted)]">
+
+              Share of clicks to the leading product
+
+            </p>
+
+          </div>
+
+        </section>
+
+
+        <section className="mt-8 rounded-2xl border border-[var(--line)] bg-white p-6">
+
+          <div className="flex flex-wrap items-start justify-between gap-4">
+
+            <div>
+
+              <p className="admin-eyebrow">
+
+                Growth intelligence
+
+              </p>
+
+              <h2 className="display-serif mt-2 text-3xl">
+
+                What the click data suggests
+
+              </h2>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+
+                Directional recommendations from retailer-click behavior only.
+
+                They do not represent confirmed purchases, conversions or revenue.
+
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+
+            {visibleSignals.map(
+
+              (
+
+                signal,
+
+                index
+
+              ) => (
+
+                <div
+
+                  key={`${signal.title}-${index}`}
+
+                  className={`rounded-xl border p-5 ${
+
+                    signal.tone ===
+
+                    "positive"
+
+                      ? "border-emerald-200 bg-emerald-50"
+
+                      : signal.tone ===
+
+                          "watch"
+
+                        ? "border-amber-300 bg-amber-50"
+
+                        : "border-[var(--line)] bg-[var(--paper)]"
+
+                  }`}
+
+                >
+
+                  <p className="font-semibold">
+
+                    {signal.title}
+
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+
+                    {signal.detail}
+
+                  </p>
+
+                </div>
+
+              )
+
+            )}
+
+          </div>
+
+        </section>
+
+
+        {previousRangeLabel && (
                 <p className="mt-1 text-xs text-[var(--muted)]">
                   Compared with {previousRangeLabel}.
                 </p>
@@ -2864,6 +3664,272 @@ const params =
           </div>
 
         </section>
+
+        <section className="mt-8 grid gap-8 xl:grid-cols-2">
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
+
+            <p className="admin-eyebrow">
+
+              Editorial paths
+
+            </p>
+
+            <h2 className="display-serif mt-2 text-3xl">
+
+              Article → product clicks
+
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+
+              The strongest recorded editorial paths to retailer intent.
+
+              Use these as a signal for content maintenance, not as purchase data.
+
+            </p>
+
+
+            <div className="mt-6 divide-y divide-[var(--line)]">
+
+              {articleProductGroups.length >
+
+              0 ? (
+
+                articleProductGroups.map(
+
+                  (
+
+                    group,
+
+                    index
+
+                  ) => {
+
+                    const article =
+
+                      group.articleId
+
+                        ? articleMap.get(
+
+                            group.articleId
+
+                          )
+
+                        : null;
+
+
+                    const product =
+
+                      group.productId
+
+                        ? productMap.get(
+
+                            group.productId
+
+                          )
+
+                        : null;
+
+
+                    return (
+
+                      <div
+
+                        key={`${group.articleId}-${group.productId}`}
+
+                        className="py-4"
+
+                      >
+
+                        <div className="flex items-start justify-between gap-5">
+
+                          <div className="min-w-0">
+
+                            <p className="text-xs font-semibold text-[var(--muted)]">
+
+                              {index + 1}.{" "}
+
+                              {article?.title ??
+
+                                "Unknown article"}
+
+                            </p>
+
+                            <p className="mt-1 font-medium">
+
+                              →{" "}
+
+                              {product?.name ??
+
+                                "Unknown product"}
+
+                            </p>
+
+                          </div>
+
+                          <strong>
+
+                            {group._count._all}
+
+                          </strong>
+
+                        </div>
+
+                      </div>
+
+                    );
+
+                  }
+
+                )
+
+              ) : (
+
+                <p className="py-4 text-sm text-[var(--muted)]">
+
+                  No article-to-product retailer paths are recorded for this period.
+
+                </p>
+
+              )}
+
+            </div>
+
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
+
+            <p className="admin-eyebrow">
+
+              Retailer paths
+
+            </p>
+
+            <h2 className="display-serif mt-2 text-3xl">
+
+              Provider → product clicks
+
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+
+              Shows which provider/product combinations receive outbound interest.
+
+            </p>
+
+
+            <div className="mt-6 divide-y divide-[var(--line)]">
+
+              {providerProductGroups.length >
+
+              0 ? (
+
+                providerProductGroups.map(
+
+                  (
+
+                    group,
+
+                    index
+
+                  ) => {
+
+                    const provider =
+
+                      group.providerId
+
+                        ? providerMap.get(
+
+                            group.providerId
+
+                          )
+
+                        : null;
+
+
+                    const product =
+
+                      group.productId
+
+                        ? productMap.get(
+
+                            group.productId
+
+                          )
+
+                        : null;
+
+
+                    return (
+
+                      <div
+
+                        key={`${group.providerId}-${group.productId}`}
+
+                        className="py-4"
+
+                      >
+
+                        <div className="flex items-start justify-between gap-5">
+
+                          <div className="min-w-0">
+
+                            <p className="text-xs font-semibold text-[var(--muted)]">
+
+                              {index + 1}.{" "}
+
+                              {provider?.name ??
+
+                                "Unknown provider"}
+
+                            </p>
+
+                            <p className="mt-1 font-medium">
+
+                              →{" "}
+
+                              {product?.name ??
+
+                                "Unknown product"}
+
+                            </p>
+
+                          </div>
+
+                          <strong>
+
+                            {group._count._all}
+
+                          </strong>
+
+                        </div>
+
+                      </div>
+
+                    );
+
+                  }
+
+                )
+
+              ) : (
+
+                <p className="py-4 text-sm text-[var(--muted)]">
+
+                  No provider-to-product retailer paths are recorded for this period.
+
+                </p>
+
+              )}
+
+            </div>
+
+          </div>
+
+        </section>
+
 
         {/* Category intelligence + tracking health */}
 

@@ -10,6 +10,10 @@ import {
 import { prisma } from "@/lib/db/prisma";
 import { requireRole } from "@/lib/auth/require-admin";
 import { articleInputSchema } from "@/lib/validation/content";
+import {
+  getEditorialReadiness,
+  getPublishBlockMessage,
+} from "@/lib/content/editorial-readiness";
 
 
 export type ArticleActionState = {
@@ -349,6 +353,47 @@ export async function createArticle(
       }
     }
 
+  }
+
+
+  /*
+   * Server-side publishing safeguard.
+   *
+   * Drafts may remain incomplete, but published
+   * content must pass the essential editorial
+   * readiness checks.
+   */
+
+  const readiness =
+    getEditorialReadiness({
+      title: parsed.data.title,
+      slug: parsed.data.slug,
+      excerpt:
+        parsed.data.excerpt ?? "",
+      featuredImage:
+        parsed.data.featuredImage ?? "",
+      seoTitle:
+        parsed.data.seoTitle ?? "",
+      seoDescription:
+        parsed.data.seoDescription ?? "",
+      blocks,
+    });
+
+
+  if (
+    parsed.data.status ===
+      "PUBLISHED" &&
+    readiness.blockers.length >
+      0
+  ) {
+    return {
+      ok: false,
+      message:
+        getPublishBlockMessage(
+          readiness
+        ) ??
+        "Complete the publishing checklist before publishing.",
+    };
   }
 
 

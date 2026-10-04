@@ -41,10 +41,11 @@ export const metadata: Metadata = {
   category:
     "lifestyle",
 
-  alternates: {
-    canonical:
-      "/",
-  },
+  creator:
+    "Venuvella",
+
+  publisher:
+    "Venuvella",
 
   icons: {
     icon:
@@ -54,9 +55,6 @@ export const metadata: Metadata = {
   openGraph: {
     type:
       "website",
-
-    url:
-      "/",
 
     siteName:
       "Venuvella",
@@ -126,6 +124,45 @@ export const metadata: Metadata = {
 };
 
 
+const organizationStructuredData = {
+  "@context":
+    "https://schema.org",
+
+  "@type":
+    "Organization",
+
+  name:
+    "Venuvella",
+
+  url:
+    siteUrl,
+
+  logo:
+    new URL(
+      "/favicon.svg",
+      siteUrl
+    ).toString(),
+};
+
+
+const websiteStructuredData = {
+  "@context":
+    "https://schema.org",
+
+  "@type":
+    "WebSite",
+
+  name:
+    "Venuvella",
+
+  url:
+    siteUrl,
+
+  description:
+    "Thoughtful recommendations across beauty, home, fitness and style.",
+};
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -138,6 +175,19 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
     >
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html:
+              JSON.stringify([
+                organizationStructuredData,
+                websiteStructuredData,
+              ]).replace(
+                /</g,
+                "\\u003c"
+              ),
+          }}
+        />
 
         <Header />
 

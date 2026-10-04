@@ -340,6 +340,9 @@ export async function generateMetadata({
       publishedTime:
         article.publishedAt?.toISOString(),
 
+      modifiedTime:
+        article.updatedAt.toISOString(),
+
       authors: [
         article.author.name,
       ],
@@ -487,6 +490,56 @@ export default async function ArticlePage({
       : [];
 
 
+  const relatedArticles =
+    await prisma.article.findMany({
+      where: {
+        id: {
+          not:
+            article.id,
+        },
+
+        categoryId:
+          article.categoryId,
+
+        status:
+          "PUBLISHED",
+
+        publishedAt: {
+          lte:
+            new Date(),
+        },
+      },
+
+      orderBy: [
+        {
+          publishedAt:
+            "desc",
+        },
+        {
+          updatedAt:
+            "desc",
+        },
+      ],
+
+      take:
+        3,
+
+      select: {
+        id:
+          true,
+
+        title:
+          true,
+
+        slug:
+          true,
+
+        excerpt:
+          true,
+      },
+    });
+
+
   const productMap =
     new Map(
       products.map(
@@ -610,6 +663,12 @@ export default async function ArticlePage({
     datePublished:
       article.publishedAt?.toISOString(),
 
+    dateModified:
+      article.updatedAt.toISOString(),
+
+    inLanguage:
+      "en-US",
+
     author: {
       "@type":
         "Person",
@@ -645,6 +704,66 @@ export default async function ArticlePage({
   };
 
 
+  const breadcrumbStructuredData = {
+    "@context":
+      "https://schema.org",
+
+    "@type":
+      "BreadcrumbList",
+
+    itemListElement: [
+      {
+        "@type":
+          "ListItem",
+
+        position:
+          1,
+
+        name:
+          "Home",
+
+        item:
+          siteUrl,
+      },
+      {
+        "@type":
+          "ListItem",
+
+        position:
+          2,
+
+        name:
+          article.category.name,
+
+        item:
+          new URL(
+            `/${article.category.slug}`,
+            siteUrl
+          ).toString(),
+      },
+      {
+        "@type":
+          "ListItem",
+
+        position:
+          3,
+
+        name:
+          article.title,
+
+        item:
+          articleUrl,
+      },
+    ],
+  };
+
+
+  const structuredData = [
+    articleStructuredData,
+    breadcrumbStructuredData,
+  ];
+
+
   return (
     <main className="pb-20 sm:pb-28">
 
@@ -653,7 +772,7 @@ export default async function ArticlePage({
         dangerouslySetInnerHTML={{
           __html:
             JSON.stringify(
-              articleStructuredData
+              structuredData
             ).replace(
               /</g,
               "\\u003c"
@@ -1290,6 +1409,56 @@ export default async function ArticlePage({
               )}
 
             </div>
+
+
+            {relatedArticles.length >
+              0 && (
+              <section className="mt-16 border-t border-[var(--line)] pt-10">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+                  Related reading
+                </p>
+
+                <h2 className="display-serif mt-3 text-3xl leading-tight sm:text-4xl">
+                  More from {article.category.name}
+                </h2>
+
+                <div className="mt-7 grid gap-4">
+                  {relatedArticles.map(
+                    (
+                      relatedArticle
+                    ) => (
+                      <Link
+                        key={
+                          relatedArticle.id
+                        }
+                        href={`/articles/${relatedArticle.slug}`}
+                        className="group rounded-2xl border border-[var(--line)] bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-sm"
+                      >
+                        <p className="text-lg font-semibold leading-7 group-hover:underline">
+                          {relatedArticle.title}
+                        </p>
+
+                        {relatedArticle.excerpt && (
+                          <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--muted)]">
+                            {relatedArticle.excerpt}
+                          </p>
+                        )}
+
+                        <span className="mt-4 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.13em]">
+                          Read article
+
+                          <ArrowRight
+                            size={
+                              13
+                            }
+                          />
+                        </span>
+                      </Link>
+                    )
+                  )}
+                </div>
+              </section>
+            )}
 
 
             {/* End matter */}

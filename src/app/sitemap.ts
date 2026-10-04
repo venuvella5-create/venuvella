@@ -16,11 +16,15 @@ const siteUrl = (
 );
 
 
-export const dynamic =
-  "force-dynamic";
+export const revalidate =
+  3600;
 
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const now =
+    new Date();
+
+
   const [
     articles,
     products,
@@ -30,6 +34,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       where: {
         status:
           "PUBLISHED",
+
+        publishedAt: {
+          lte:
+            now,
+        },
       },
 
       select: {
@@ -79,7 +88,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority:
         1,
     },
-
     {
       url:
         `${siteUrl}/articles`,
@@ -90,7 +98,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority:
         0.9,
     },
-
     {
       url:
         `${siteUrl}/products`,
@@ -101,7 +108,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority:
         0.9,
     },
-
     {
       url:
         `${siteUrl}/guides`,
@@ -112,7 +118,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority:
         0.8,
     },
-
     {
       url:
         `${siteUrl}/deals`,
@@ -123,7 +128,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority:
         0.8,
     },
-
     {
       url:
         `${siteUrl}/seasonal`,
@@ -133,6 +137,76 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       priority:
         0.7,
+    },
+    {
+      url:
+        `${siteUrl}/about`,
+
+      changeFrequency:
+        "monthly",
+
+      priority:
+        0.5,
+    },
+    {
+      url:
+        `${siteUrl}/contact`,
+
+      changeFrequency:
+        "monthly",
+
+      priority:
+        0.4,
+    },
+    {
+      url:
+        `${siteUrl}/editorial-policy`,
+
+      changeFrequency:
+        "monthly",
+
+      priority:
+        0.5,
+    },
+    {
+      url:
+        `${siteUrl}/affiliate-disclosure`,
+
+      changeFrequency:
+        "monthly",
+
+      priority:
+        0.5,
+    },
+    {
+      url:
+        `${siteUrl}/privacy`,
+
+      changeFrequency:
+        "yearly",
+
+      priority:
+        0.3,
+    },
+    {
+      url:
+        `${siteUrl}/terms`,
+
+      changeFrequency:
+        "yearly",
+
+      priority:
+        0.3,
+    },
+    {
+      url:
+        `${siteUrl}/cookies`,
+
+      changeFrequency:
+        "yearly",
+
+      priority:
+        0.3,
     },
   ];
 
@@ -144,6 +218,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       "guides",
       "deals",
       "seasonal",
+      "about",
+      "contact",
+      "editorial-policy",
+      "affiliate-disclosure",
+      "privacy",
+      "terms",
+      "cookies",
+      "search",
+      "go",
       "admin",
       "api",
     ]);
@@ -225,20 +308,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
 
-  const uniqueEntries =
-    Array.from(
-      new Map(
-        entries.map(
-          (
-            entry
-          ) => [
-            entry.url,
-            entry,
-          ]
-        )
-      ).values()
-    );
-
-
-  return uniqueEntries;
+  return Array.from(
+    new Map(
+      entries.map(
+        (
+          entry
+        ) => [
+          entry.url,
+          entry,
+        ]
+      )
+    ).values()
+  );
 }

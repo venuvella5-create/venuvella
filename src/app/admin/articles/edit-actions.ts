@@ -41,6 +41,10 @@ import { requireRole } from "@/lib/auth/require-admin";
 
 
 import { articleInputSchema } from "@/lib/validation/content";
+import {
+  getEditorialReadiness,
+  getPublishBlockMessage,
+} from "@/lib/content/editorial-readiness";
 
 
 
@@ -1089,6 +1093,150 @@ const raw =
 
 
 
+   * Server-side publishing safeguard.
+
+
+
+   */
+
+
+
+
+
+
+
+  const readiness =
+
+
+
+    getEditorialReadiness({
+
+
+
+      title: parsed.data.title,
+
+
+
+      slug: parsed.data.slug,
+
+
+
+      excerpt:
+
+
+
+        parsed.data.excerpt ?? "",
+
+
+
+      featuredImage:
+
+
+
+        parsed.data.featuredImage ?? "",
+
+
+
+      seoTitle:
+
+
+
+        parsed.data.seoTitle ?? "",
+
+
+
+      seoDescription:
+
+
+
+        parsed.data.seoDescription ?? "",
+
+
+
+      blocks,
+
+
+
+    });
+
+
+
+
+
+
+
+
+
+
+
+  if (
+
+
+
+    parsed.data.status ===
+
+
+
+      "PUBLISHED" &&
+
+
+
+    readiness.blockers.length > 0
+
+
+
+  ) {
+
+
+
+    return {
+
+
+
+      ok: false,
+
+
+
+      message:
+
+
+
+        getPublishBlockMessage(
+
+
+
+          readiness
+
+
+
+        ) ??
+
+
+
+        "Complete the publishing checklist before publishing.",
+
+
+
+    };
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+  /*
+
+
+
    * Build ArticleProduct relations
 
 
@@ -1344,6 +1492,10 @@ const raw =
         categoryId: true,
 
         authorId: true,
+
+        status: true,
+
+        publishedAt: true,
 
 
 
@@ -1864,11 +2016,11 @@ const raw =
 
 
 
-                ? new Date()
+                ? article.publishedAt ?? new Date()
 
 
 
-                : null,
+                : article.publishedAt,
 
 
 

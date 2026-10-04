@@ -105,29 +105,31 @@ model ArticleTag {
 }
 
 model Article {
-  id                String            @id @default(cuid())
-  title             String
-  slug              String            @unique
-  subtitle          String?
-  excerpt           String?
-  featuredImage     String?
-  status            ContentStatus     @default(DRAFT)
-  categoryId        String
-  authorId          String
-  publishedAt       DateTime?
-  scheduledAt       DateTime?
-  updatedAt         DateTime          @updatedAt
-  createdAt         DateTime          @default(now())
-  clicks            AffiliateClick[]
-  author            Author            @relation(fields: [authorId], references: [id])
-  category          Category          @relation(fields: [categoryId], references: [id])
-  blocks            ArticleBlock[]
-  relatedProducts   ArticleProduct[]
-  relatedArticles   ArticleRelation[] @relation("ArticleRelationsFrom")
-  relatedToArticles ArticleRelation[] @relation("ArticleRelationsTo")
-  tags              ArticleTag[]
-  faqs              FAQ[]
-  seo               SEOData?
+  id                          String                      @id @default(cuid())
+  title                       String
+  slug                        String                      @unique
+  subtitle                    String?
+  excerpt                     String?
+  featuredImage               String?
+  status                      ContentStatus               @default(DRAFT)
+  categoryId                  String
+  authorId                    String
+  publishedAt                 DateTime?
+  scheduledAt                 DateTime?
+  updatedAt                   DateTime                    @updatedAt
+  createdAt                   DateTime                    @default(now())
+  clicks                      AffiliateClick[]
+  author                      Author                      @relation(fields: [authorId], references: [id])
+  category                    Category                    @relation(fields: [categoryId], references: [id])
+  blocks                      ArticleBlock[]
+  relatedProducts             ArticleProduct[]
+  relatedArticles             ArticleRelation[]           @relation("ArticleRelationsFrom")
+  relatedToArticles           ArticleRelation[]           @relation("ArticleRelationsTo")
+  tags                        ArticleTag[]
+  faqs                        FAQ[]
+  seo                         SEOData?
+  newsletterFeaturedCampaigns NewsletterCampaign[]        @relation("NewsletterFeaturedArticle")
+  newsletterCampaignItems     NewsletterCampaignArticle[]
 
   @@index([status, publishedAt])
   @@index([categoryId, status])
@@ -182,28 +184,29 @@ model Brand {
 }
 
 model Product {
-  id               String            @id @default(cuid())
-  slug             String            @unique
-  name             String
-  description      String?
-  editorialSummary String?
-  brandId          String?
-  categoryId       String
-  status           ProductStatus     @default(DISCOVERED)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  clicks           AffiliateClick[]
-  articleProducts  ArticleProduct[]
-  comparisonItems  ComparisonItem[]
-  brand            Brand?            @relation(fields: [brandId], references: [id])
-  category         Category          @relation(fields: [categoryId], references: [id])
-  categories       ProductCategory[]
-  features         ProductFeature[]
-  images           ProductImage[]
-  tags             ProductTag[]
-  variants         ProductVariant[]
-  providerProducts ProviderProduct[]
-  redirects        Redirect[]
+  id                      String                      @id @default(cuid())
+  slug                    String                      @unique
+  name                    String
+  description             String?
+  editorialSummary        String?
+  brandId                 String?
+  categoryId              String
+  status                  ProductStatus               @default(DISCOVERED)
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+  clicks                  AffiliateClick[]
+  articleProducts         ArticleProduct[]
+  comparisonItems         ComparisonItem[]
+  brand                   Brand?                      @relation(fields: [brandId], references: [id])
+  category                Category                    @relation(fields: [categoryId], references: [id])
+  categories              ProductCategory[]
+  features                ProductFeature[]
+  images                  ProductImage[]
+  tags                    ProductTag[]
+  variants                ProductVariant[]
+  providerProducts        ProviderProduct[]
+  redirects               Redirect[]
+  newsletterCampaignItems NewsletterCampaignProduct[]
 
   @@index([categoryId, status])
   @@index([brandId])
@@ -436,6 +439,53 @@ model NewsletterSubscriber {
   @@index([confirmedAt])
 }
 
+model NewsletterCampaign {
+  id                String                      @id @default(cuid())
+  issueNumber       Int                         @unique
+  slug              String                      @unique
+  campaignKey       String                      @unique
+  subject           String
+  previewText       String?
+  editorialIntro    String?
+  status            NewsletterCampaignStatus    @default(DRAFT)
+  featuredArticleId String?
+  scheduledAt       DateTime?
+  sentAt            DateTime?
+  recipientCount    Int?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  featuredArticle   Article?                    @relation("NewsletterFeaturedArticle", fields: [featuredArticleId], references: [id], onDelete: SetNull)
+  articles          NewsletterCampaignArticle[]
+  products          NewsletterCampaignProduct[]
+
+  @@index([status, scheduledAt])
+  @@index([sentAt])
+}
+
+model NewsletterCampaignArticle {
+  campaignId String
+  articleId  String
+  position   Int                @default(0)
+  campaign   NewsletterCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  article    Article            @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, articleId])
+  @@index([campaignId, position])
+  @@index([articleId])
+}
+
+model NewsletterCampaignProduct {
+  campaignId String
+  productId  String
+  position   Int                @default(0)
+  campaign   NewsletterCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product    Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, productId])
+  @@index([campaignId, position])
+  @@index([productId])
+}
+
 model AffiliateClick {
   id          String             @id @default(cuid())
   productId   String?
@@ -563,6 +613,13 @@ model AuditLog {
 
   @@index([entity, entityId])
   @@index([userId, createdAt])
+}
+
+enum NewsletterCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  ARCHIVED
 }
 
 enum UserRole {

@@ -8,6 +8,12 @@ import {
 
 import { updateArticle } from "@/app/admin/articles/edit-actions";
 
+import { ArticleReadinessPanel } from "@/components/admin/ArticleReadinessPanel";
+import { ArticlePlacementPanel } from "@/components/admin/ArticlePlacementPanel";
+import {
+  getEditorialReadiness,
+} from "@/lib/content/editorial-readiness";
+
 
 const textBlockOptions = [
   "PARAGRAPH",
@@ -117,6 +123,38 @@ export function EditArticleEditor({
     );
 
 
+  const [title, setTitle] =
+    useState(article.title);
+
+  const [slug, setSlug] =
+    useState(article.slug);
+
+  const [excerpt, setExcerpt] =
+    useState(
+      article.excerpt ?? ""
+    );
+
+  const [
+    featuredImage,
+    setFeaturedImage,
+  ] = useState(
+    article.featuredImage ?? ""
+  );
+
+  const [seoTitle, setSeoTitle] =
+    useState(article.seoTitle);
+
+  const [
+    seoDescription,
+    setSeoDescription,
+  ] = useState(
+    article.seoDescription
+  );
+
+  const [status, setStatus] =
+    useState(article.status);
+
+
   const [pickerMode, setPickerMode] =
     useState<PickerMode>(null);
 
@@ -134,6 +172,69 @@ export function EditArticleEditor({
       ok: false,
       message: "",
     });
+
+
+  const readiness = useMemo(
+    () =>
+      getEditorialReadiness({
+        title,
+        slug,
+        excerpt,
+        featuredImage,
+        seoTitle,
+        seoDescription,
+        blocks,
+      }),
+    [
+      title,
+      slug,
+      excerpt,
+      featuredImage,
+      seoTitle,
+      seoDescription,
+      blocks,
+    ]
+  );
+
+
+  const placement = useMemo(() => {
+    const productBlocks =
+      blocks.filter(
+        (block) =>
+          block.type === "PRODUCT" ||
+          block.type === "PRODUCT_GRID"
+      );
+
+    const productIds =
+      productBlocks.flatMap(
+        (block) =>
+          block.type === "PRODUCT"
+            ? [block.productId]
+            : block.productIds
+      );
+
+    const distinctProductCount =
+      new Set(productIds).size;
+
+    const firstProductIndex =
+      blocks.findIndex(
+        (block) =>
+          block.type === "PRODUCT" ||
+          block.type === "PRODUCT_GRID"
+      );
+
+    return {
+      productBlockCount:
+        productBlocks.length,
+
+      distinctProductCount,
+
+      firstProductIndex:
+        firstProductIndex === -1
+          ? null
+          : firstProductIndex,
+    };
+  }, [blocks]);
 
 
   const serialized = useMemo(() => {
@@ -380,12 +481,19 @@ export function EditArticleEditor({
 
             <input
               name="title"
-              defaultValue={
-                article.title
+              value={title}
+              onChange={(event) =>
+                setTitle(
+                  event.target.value
+                )
               }
               required
               className="admin-input text-2xl font-serif"
             />
+
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              {title.length} characters.
+            </p>
           </div>
 
 
@@ -396,8 +504,13 @@ export function EditArticleEditor({
 
             <input
               name="slug"
-              defaultValue={
-                article.slug
+              value={slug}
+              onChange={(event) =>
+                setSlug(
+                  event.target.value
+                    .toLowerCase()
+                    .replace(/\s+/g, "-")
+                )
               }
               required
               className="admin-input"
@@ -428,12 +541,19 @@ export function EditArticleEditor({
 
             <textarea
               name="excerpt"
-              defaultValue={
-                article.excerpt ??
-                ""
+              value={excerpt}
+              onChange={(event) =>
+                setExcerpt(
+                  event.target.value
+                )
               }
               className="admin-input min-h-24"
             />
+
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              {excerpt.length} characters ·
+              aim for 60–180.
+            </p>
           </div>
 
 
@@ -445,9 +565,11 @@ export function EditArticleEditor({
             <input
               name="featuredImage"
               type="url"
-              defaultValue={
-                article.featuredImage ??
-                ""
+              value={featuredImage}
+              onChange={(event) =>
+                setFeaturedImage(
+                  event.target.value
+                )
               }
               className="admin-input"
             />
@@ -523,8 +645,11 @@ export function EditArticleEditor({
 
             <select
               name="status"
-              defaultValue={
-                article.status
+              value={status}
+              onChange={(event) =>
+                setStatus(
+                  event.target.value
+                )
               }
               className="admin-input"
             >
@@ -550,11 +675,19 @@ export function EditArticleEditor({
 
             <input
               name="seoTitle"
-              defaultValue={
-                article.seoTitle
+              value={seoTitle}
+              onChange={(event) =>
+                setSeoTitle(
+                  event.target.value
+                )
               }
               className="admin-input"
             />
+
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              {(seoTitle || title).length}
+              {" "}characters effective.
+            </p>
           </div>
 
 
@@ -565,11 +698,19 @@ export function EditArticleEditor({
 
             <textarea
               name="seoDescription"
-              defaultValue={
-                article.seoDescription
+              value={seoDescription}
+              onChange={(event) =>
+                setSeoDescription(
+                  event.target.value
+                )
               }
               className="admin-input min-h-24"
             />
+
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              {(seoDescription || excerpt).length}
+              {" "}characters effective.
+            </p>
           </div>
 
         </aside>
@@ -1081,6 +1222,31 @@ export function EditArticleEditor({
       </section>
 
 
+      <ArticlePlacementPanel
+        productBlockCount={
+          placement.productBlockCount
+        }
+        distinctProductCount={
+          placement.distinctProductCount
+        }
+        wordCount={
+          readiness.wordCount
+        }
+        firstProductIndex={
+          placement.firstProductIndex
+        }
+        blockCount={
+          blocks.length
+        }
+      />
+
+
+      <ArticleReadinessPanel
+        readiness={readiness}
+        status={status}
+      />
+
+
       {state.message && (
         <p
           className={
@@ -1097,12 +1263,18 @@ export function EditArticleEditor({
       <div className="flex justify-end">
 
         <button
-          disabled={pending}
-          className="admin-primary"
+          disabled={
+            pending ||
+            (status === "PUBLISHED" &&
+              readiness.blockers.length > 0)
+          }
+          className="admin-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending
             ? "Saving…"
-            : "Save changes"}
+            : status === "PUBLISHED"
+              ? "Save & publish"
+              : "Save changes"}
         </button>
 
       </div>
