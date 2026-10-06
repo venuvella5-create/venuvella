@@ -718,7 +718,12 @@ export default async function AdminProductsPage({
 
 
           <div className="flex flex-wrap gap-2">
-
+<Link
+    href="/admin/products/new"
+    className="admin-primary"
+  >
+    Add Product
+  </Link>
             <Link
               href="/admin/provider-sync"
               className="admin-secondary"
