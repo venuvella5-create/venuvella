@@ -127,7 +127,7 @@ export function ArticleEditor({
   ] = useState("");
 
   const [status, setStatus] =
-    useState("DRAFT");
+    useState("PUBLISHED");
 
 
   const [pickerMode, setPickerMode] =

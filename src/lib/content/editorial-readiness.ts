@@ -148,7 +148,7 @@ export function getEditorialReadiness(
       detail:
         "Aim for at least 60 characters for cards, search and metadata fallback.",
       passed: excerpt.length >= 60,
-      blocking: true,
+      blocking: false,
     },
     {
       id: "image",
@@ -156,7 +156,7 @@ export function getEditorialReadiness(
       detail:
         "Published stories should include a featured image.",
       passed: featuredImage.length > 0,
-      blocking: true,
+      blocking: false,
     },
     {
       id: "body",
@@ -164,6 +164,14 @@ export function getEditorialReadiness(
       detail:
         "Aim for at least 150 words before publishing.",
       passed: wordCount >= 150,
+      blocking: false,
+    },
+    {
+      id: "content",
+      label: "Some article content",
+      detail:
+        "Add at least one paragraph or product block before publishing.",
+      passed: wordCount >= 1 || productBlockCount >= 1,
       blocking: true,
     },
     {
@@ -172,7 +180,7 @@ export function getEditorialReadiness(
       detail:
         "Include at least one heading to help readers scan the story.",
       passed: headingCount >= 1,
-      blocking: true,
+      blocking: false,
     },
     {
       id: "empty-blocks",

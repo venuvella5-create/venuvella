@@ -12,6 +12,10 @@ import {
   Header,
 } from "@/components/layout/Header";
 
+import {
+  ScrollRecommendations,
+} from "@/components/recommendations/ScrollRecommendations";
+
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -194,6 +198,8 @@ export default function RootLayout({
         {children}
 
         <Footer />
+
+        <ScrollRecommendations />
       </body>
     </html>
   );

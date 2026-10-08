@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import {
   ArticleBlockType,
@@ -646,10 +647,7 @@ export async function createArticle(
   }
 
 
-  return {
-    ok: true,
-
-    message:
-      `Article “${article.title}” created.`,
-  };
+  redirect(
+    `/admin/articles/${article.id}?created=1`
+  );
 }

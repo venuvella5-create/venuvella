@@ -968,136 +968,36 @@ export async function createStaffAction(
 
     return {
 
-
-
       ok: false,
-
-
-
       message:
-
-
-
         "Only AUTHOR accounts can be linked to an author profile.",
-
-
-
     };
-
-
-
   }
-
-
-
-
-
-
-
-
-
-
-
   if (authorId) {
-
-
 
     const author =
 
-
-
       await prisma.author.findUnique({
-
-
-
         where: {
-
-
-
           id:
-
-
-
             authorId,
-
-
-
         },
-
-
-
-
-
-
 
         select: {
-
-
-
           id: true,
-
-
-
           userId: true,
-
-
-
         },
-
-
-
       });
 
-
-
-
-
-
-
-
-
-
-
     if (!author) {
-
-
-
       return {
-
-
-
         ok: false,
-
-
-
         message:
-
-
-
           "The selected author profile does not exist.",
-
-
-
       };
-
-
-
     }
 
-
-
-
-
-
-
-
-
-
-
     if (author.userId) {
-
-
-
       return {
 
 
@@ -1192,12 +1092,7 @@ export async function createStaffAction(
 
               name,
 
-
-
               email,
-
-
-
               passwordHash,
 
               role,
@@ -1213,23 +1108,10 @@ export async function createStaffAction(
 
             },
 
-
-
-
-
-
-
             select: {
 
-
-
               id: true,
-
-
-
             },
-
-
 
           });
 
@@ -3136,16 +3018,8 @@ export async function setStaffActiveAction(
 
 
         id: true,
-
-
-
         email: true,
-
-
-
         isActive: true,
-
-
 
       },
 

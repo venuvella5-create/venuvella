@@ -14,6 +14,9 @@ import {
 
 import {
   deleteProviderMapping,
+  setProductStatus,
+  addProductImage,
+  removeProductImage,
 } from "@/app/admin/products/actions";
 
 import {
@@ -262,9 +265,13 @@ function formatMoney(
 
 export default async function AdminProductPage({
   params,
+  searchParams,
 }: {
   params: Promise<{
     id: string;
+  }>;
+  searchParams: Promise<{
+    created?: string;
   }>;
 }) {
   await requirePageRole([
@@ -276,6 +283,10 @@ export default async function AdminProductPage({
   const {
     id,
   } = await params;
+
+  const {
+    created,
+  } = await searchParams;
 
 
   const [
@@ -291,6 +302,12 @@ export default async function AdminProductPage({
         brand: true,
 
         category: true,
+
+        images: {
+          orderBy: {
+            position: "asc",
+          },
+        },
 
         providerProducts: {
           include: {
@@ -442,6 +459,111 @@ export default async function AdminProductPage({
     <main className="min-h-screen bg-[#efeee9] py-10">
 
       <div className="container-shell">
+
+        {created && (
+          <p className="admin-success mb-6">
+            Product created.
+            {product.status === "PUBLISHED"
+              ? " It is live on the site."
+              : " It is saved as a draft — press Publish to put it on the site."}
+          </p>
+        )}
+
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--line)] bg-white p-5">
+          <div>
+            <p className="admin-eyebrow">Visibility</p>
+            <p className="mt-1 text-sm font-semibold">
+              {product.status === "PUBLISHED"
+                ? "Published — visible on the site and in the article editor"
+                : `Not published (${formatLabel(product.status)}) — hidden from the site and from articles`}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {product.status === "PUBLISHED" ? (
+              <>
+                <Link
+                  href={`/products/${product.slug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="admin-secondary"
+                >
+                  View live page
+                </Link>
+
+                <form action={setProductStatus}>
+                  <input type="hidden" name="productId" value={product.id} />
+                  <input type="hidden" name="status" value="DISCOVERED" />
+                  <button type="submit" className="admin-secondary">
+                    Unpublish
+                  </button>
+                </form>
+              </>
+            ) : (
+              <form action={setProductStatus}>
+                <input type="hidden" name="productId" value={product.id} />
+                <input type="hidden" name="status" value="PUBLISHED" />
+                <button type="submit" className="admin-primary">
+                  Publish product
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+
+        <section className="mb-6 rounded-2xl border border-[var(--line)] bg-white p-5">
+          <p className="admin-eyebrow">Product images</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Paste a direct link to an image. The first image is the main one.
+          </p>
+
+          {product.images.length > 0 ? (
+            <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+              {product.images.map((image, index) => (
+                <div key={image.id} className="rounded-xl border border-[var(--line)] p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={image.url}
+                    alt={image.altText ?? product.name}
+                    className="aspect-square w-full rounded-lg object-cover"
+                  />
+                  <div className="mt-2 flex items-center justify-between text-xs">
+                    <span>{index === 0 ? "Main image" : `Image ${index + 1}`}</span>
+                    <form action={removeProductImage}>
+                      <input type="hidden" name="imageId" value={image.id} />
+                      <input type="hidden" name="productId" value={product.id} />
+                      <button type="submit" className="underline">
+                        Remove
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm font-semibold">
+              No image yet — add one below.
+            </p>
+          )}
+
+          <form action={addProductImage} className="mt-4 flex flex-wrap items-center gap-3">
+            <input type="hidden" name="productId" value={product.id} />
+            <input
+              name="url"
+              type="url"
+              required
+              placeholder="https://…/photo.jpg"
+              className="admin-input min-w-[260px] flex-1"
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="makeMain" defaultChecked />
+              Make main image
+            </label>
+            <button type="submit" className="admin-primary">
+              Add image
+            </button>
+          </form>
+        </section>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
 

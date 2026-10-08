@@ -127,9 +127,13 @@ function getStatusClasses(
 
 export default async function EditArticlePage({
   params,
+  searchParams,
 }: {
   params: Promise<{
     id: string;
+  }>;
+  searchParams: Promise<{
+    created?: string;
   }>;
 }) {
   const session =
@@ -143,6 +147,10 @@ export default async function EditArticlePage({
   const {
     id,
   } = await params;
+
+  const {
+    created,
+  } = await searchParams;
 
 
   const isAuthor =
@@ -416,6 +424,15 @@ export default async function EditArticlePage({
     <main className="min-h-screen bg-[#efeee9] py-10">
 
       <div className="container-shell">
+
+        {created && (
+          <p className="admin-success mb-6">
+            Article saved.
+            {article.status === ContentStatus.PUBLISHED
+              ? " It is live on the site."
+              : " It is saved as a draft and is not visible on the site yet. Set the status to Published and save to put it live."}
+          </p>
+        )}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
 

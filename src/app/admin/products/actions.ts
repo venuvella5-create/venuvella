@@ -446,17 +446,17 @@ const mappingId =
    */
 
   const provider =
-    await prisma.affiliateProvider.findUnique({
-      where: {
-        id: providerId,
-      },
-      select: {
-        id: true,
-        name: true,
-        active: true,
-      },
+  await prisma.affiliateProvider.findUnique({
+    where: {
+      id: providerId,
+    },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+    },
+  });
 
-    });
   if (!provider) {
     return {
       ok: false,
@@ -846,4 +846,103 @@ const mappingId =
     productId
 
   );
+}
+
+/**
+ * Publish / unpublish a product from its admin page.
+ */
+export async function setProductStatus(formData: FormData) {
+  await requireRole(["ADMIN", "EDITOR"]);
+
+  const productId = String(formData.get("productId") ?? "").trim();
+  const status = String(formData.get("status") ?? "").trim();
+
+  if (!productId) {
+    return;
+  }
+
+  if (status !== "PUBLISHED" && status !== "ARCHIVED" && status !== "DISCOVERED") {
+    return;
+  }
+
+  const product = await prisma.product.update({
+    where: { id: productId },
+    data: { status },
+    select: { id: true, slug: true },
+  });
+
+  revalidatePath("/admin/products");
+  revalidatePath(`/admin/products/${product.id}`);
+  revalidatePath("/products");
+  revalidatePath(`/products/${product.slug}`);
+  revalidatePath(`/go/${product.slug}`);
+  revalidatePath("/");
+}
+
+
+/**
+ * Add an image (by URL) to a product. The first image becomes the main one.
+ */
+export async function addProductImage(formData: FormData) {
+  await requireRole(["ADMIN", "EDITOR"]);
+
+  const productId = String(formData.get("productId") ?? "").trim();
+  const url = String(formData.get("url") ?? "").trim();
+  const makeMain = formData.get("makeMain") === "on";
+
+  if (!productId || !isValidOptionalUrl(url) || !url) {
+    return;
+  }
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { id: true, slug: true, name: true },
+  });
+
+  if (!product) {
+    return;
+  }
+
+  const last = await prisma.productImage.findFirst({
+    where: { productId },
+    orderBy: { position: "desc" },
+    select: { position: true },
+  });
+
+  let position = last ? last.position + 1 : 0;
+
+  if (makeMain) {
+    await prisma.productImage.updateMany({
+      where: { productId },
+      data: { position: { increment: 1 } },
+    });
+    position = 0;
+  }
+
+  await prisma.productImage.create({
+    data: { productId, url, altText: product.name, position },
+  });
+
+  await revalidateProductPaths(productId);
+  revalidatePath("/products");
+  revalidatePath("/");
+}
+
+export async function removeProductImage(formData: FormData) {
+  await requireRole(["ADMIN", "EDITOR"]);
+
+  const imageId = String(formData.get("imageId") ?? "").trim();
+  const productId = String(formData.get("productId") ?? "").trim();
+
+  if (!imageId || !productId) {
+    return;
+  }
+
+  await prisma.productImage.deleteMany({
+    where: { id: imageId, productId },
+  });
+
+  await revalidateProductPaths(productId);
+  revalidatePath("/products");
+  revalidatePath("/");
 }
