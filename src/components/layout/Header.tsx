@@ -23,6 +23,7 @@ const links = [
   "Fitness",
   "Style",
   "Seasonal",
+  "Products",
   "Guides",
   "Deals",
 ];
