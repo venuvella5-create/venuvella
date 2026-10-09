@@ -3,6 +3,7 @@
 import {
   prisma,
 } from "@/lib/db/prisma";
+import { sequential } from "@/lib/db/sequential";
 
 import {
   requirePageRole,
@@ -212,7 +213,7 @@ export default async function GrowthIntelligencePage() {
     currentArticleProductGroups,
     publishedProducts,
   ] =
-    await Promise.all([
+    await sequential([
       prisma.affiliateClick.count({
         where:
           currentWhere,
@@ -618,7 +619,7 @@ export default async function GrowthIntelligencePage() {
     articles,
     providers,
   ] =
-    await Promise.all([
+    await sequential([
       productIds.length >
       0
         ? prisma.product.findMany({

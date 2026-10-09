@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { prisma } from "@/lib/db/prisma";
+import { sequential } from "@/lib/db/sequential";
 
 import { requirePageRole } from "@/lib/auth/require-admin";
 
@@ -698,7 +699,7 @@ const params =
 
     previousNonEditorialClicks,
 
-  ] = await Promise.all([
+  ] = await sequential([
 
     /*
 
@@ -1831,7 +1832,7 @@ const params =
 
     articles,
 
-  ] = await Promise.all([
+  ] = await sequential([
 
     providerIds.length > 0
 

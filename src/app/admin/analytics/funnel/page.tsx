@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   prisma,
 } from "@/lib/db/prisma";
+import { sequential } from "@/lib/db/sequential";
 
 import {
   requirePageRole,
@@ -141,7 +142,7 @@ export default async function FunnelAnalyticsPage({
     placementImpressionGroups,
     placementClickGroups,
   ] =
-    await Promise.all([
+    await sequential([
       prisma.articlePageView.count({
         where:
           createdAtWhere,
@@ -324,7 +325,7 @@ export default async function FunnelAnalyticsPage({
     articles,
     products,
   ] =
-    await Promise.all([
+    await sequential([
       articleIds.length >
       0
         ? prisma.article.findMany({
