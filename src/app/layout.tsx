@@ -52,8 +52,20 @@ export const metadata: Metadata = {
     "Venuvella",
 
   icons: {
-    icon:
-      "/favicon.svg",
+    icon: [
+      {
+        url: "/favicon.ico",
+        sizes: "any",
+      },
+
+      {
+        url: "/favicon.png",
+        type: "image/png",
+        sizes: "512x512",
+      },
+    ],
+
+    apple: "/apple-touch-icon.png",
   },
 
   openGraph: {
@@ -143,7 +155,7 @@ const organizationStructuredData = {
 
   logo:
     new URL(
-      "/favicon.svg",
+      "/logo-profile.png",
       siteUrl
     ).toString(),
 };
