@@ -315,6 +315,30 @@ export function Footer() {
 
       <div className="border-t border-[var(--line)]">
 
+        <div className="container-shell py-5">
+
+          <p className="max-w-4xl text-[11px] leading-5 text-[var(--muted)]">
+            As an Amazon Associate I earn from
+            qualifying purchases. Venuvella may
+            also earn commissions from other
+            retailers when you buy through links
+            on our site, at no extra cost to you.{" "}
+            <Link
+              href="/affiliate-disclosure"
+              className="underline transition hover:text-[var(--ink)]"
+            >
+              Learn more
+            </Link>
+            .
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div className="border-t border-[var(--line)]">
+
         <div className="container-shell flex flex-col gap-4 py-5 text-[11px] text-[var(--muted)] md:flex-row md:items-center md:justify-between">
 
           <span>
