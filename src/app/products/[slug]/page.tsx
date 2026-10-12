@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
+
+import {
+  GoLinkAttribution,
+} from "@/components/analytics/GoLinkAttribution";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
@@ -28,8 +32,14 @@ const getCachedProductBySlug =
   );
 
 
-export const dynamic =
-  "force-dynamic";
+export const revalidate = 300;
+
+// Build no pages up front: each page is created the first time someone
+// visits it, then served from the cache and refreshed every 5 minutes.
+// (An empty list also keeps the build from querying the database.)
+export function generateStaticParams() {
+  return [];
+}
 
 
 function formatPrice(
@@ -207,84 +217,17 @@ export async function generateMetadata({
 
 export default async function ProductDetailPage({
   params,
-  searchParams,
 }: {
   params:
     Promise<{
       slug: string;
     }>;
 
-  searchParams:
-    Promise<{
-      article?:
-        string;
-
-      placement?:
-        string;
-
-      campaign?:
-        string;
-
-      utm_source?:
-        string;
-
-      utm_medium?:
-        string;
-
-      utm_campaign?:
-        string;
-    }>;
 }) {
   const {
     slug,
   } =
     await params;
-
-
-  const query =
-    await searchParams;
-
-
-  const articleSlug =
-    typeof query.article ===
-    "string"
-      ? query.article
-      : null;
-
-
-  const placementKey =
-    typeof query.placement ===
-    "string"
-      ? query.placement
-      : null;
-
-
-  const campaign =
-    typeof query.campaign ===
-    "string"
-      ? query.campaign
-      : null;
-
-
-  const utmSource =
-    typeof query.utm_source ===
-    "string"
-      ? query.utm_source
-      : null;
-
-
-  const utmMedium =
-    typeof query.utm_medium ===
-    "string"
-      ? query.utm_medium
-      : null;
-
-
-  const utmCampaign =
-    typeof query.utm_campaign ===
-    "string"
-      ? query.utm_campaign
-      : null;
 
 
   const product =
@@ -316,66 +259,6 @@ export default async function ProductDetailPage({
 
   const goParams =
     new URLSearchParams();
-
-
-  if (
-    articleSlug
-  ) {
-    goParams.set(
-      "article",
-      articleSlug
-    );
-  }
-
-
-  if (
-    placementKey
-  ) {
-    goParams.set(
-      "placement",
-      placementKey
-    );
-  }
-
-
-  if (
-    campaign
-  ) {
-    goParams.set(
-      "campaign",
-      campaign
-    );
-  }
-
-
-  if (
-    utmSource
-  ) {
-    goParams.set(
-      "utm_source",
-      utmSource
-    );
-  }
-
-
-  if (
-    utmMedium
-  ) {
-    goParams.set(
-      "utm_medium",
-      utmMedium
-    );
-  }
-
-
-  if (
-    utmCampaign
-  ) {
-    goParams.set(
-      "utm_campaign",
-      utmCampaign
-    );
-  }
 
 
   const goQuery =
@@ -553,6 +436,8 @@ export default async function ProductDetailPage({
 
   return (
     <main className="pb-32 sm:pb-28">
+
+      <GoLinkAttribution />
 
       <script
         type="application/ld+json"

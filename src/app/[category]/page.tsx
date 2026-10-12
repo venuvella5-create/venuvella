@@ -14,8 +14,14 @@ import {
 } from "@/lib/content/articles";
 
 
-export const dynamic =
-  "force-dynamic";
+export const revalidate = 300;
+
+// Build no pages up front: each page is created the first time someone
+// visits it, then served from the cache and refreshed every 5 minutes.
+// (An empty list also keeps the build from querying the database.)
+export function generateStaticParams() {
+  return [];
+}
 
 
 export default async function CategoryPage({
