@@ -10,6 +10,7 @@ import { NewsletterForm } from "@/components/newsletter/NewsletterForm";
 
 import { getPublishedArticles } from "@/lib/content/articles";
 import { getPublishedProducts } from "@/lib/content/products";
+import { sequential } from "@/lib/db/sequential";
 
 export const revalidate = 300;
 
@@ -150,7 +151,7 @@ const radarItems = [
 ];
 
 export default async function HomePage() {
-  const [dbArticles, dbProducts] = await Promise.all([
+  const [dbArticles, dbProducts] = await sequential([
     getPublishedArticles(6),
     getPublishedProducts(4),
   ]);

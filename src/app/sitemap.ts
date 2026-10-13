@@ -5,6 +5,7 @@ import type {
 import {
   prisma,
 } from "@/lib/db/prisma";
+import { sequential } from "@/lib/db/sequential";
 
 
 const siteUrl = (
@@ -29,7 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     articles,
     products,
     categories,
-  ] = await Promise.all([
+  ] = await sequential([
     prisma.article.findMany({
       where: {
         status:
