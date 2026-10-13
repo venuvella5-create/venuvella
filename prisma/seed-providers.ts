@@ -31,6 +31,9 @@ const providers = [
   { name: "Apple", slug: "apple", websiteUrl: "https://www.apple.com" },
   { name: "Chewy", slug: "chewy", websiteUrl: "https://www.chewy.com" },
   { name: "Bed Bath & Beyond", slug: "bed-bath-and-beyond", websiteUrl: "https://www.bedbathandbeyond.com" },
+  { name: "Adidas", slug: "adidas", websiteUrl: "https://www.adidas.com" },
+  { name: "Alibaba.com", slug: "alibaba", websiteUrl: "https://www.alibaba.com" },
+  { name: "AliExpress", slug: "aliexpress", websiteUrl: "https://www.aliexpress.com" },
 ];
 
 async function main() {

@@ -16,10 +16,6 @@ import {
   ScrollRecommendations,
 } from "@/components/recommendations/ScrollRecommendations";
 
-import {
-  ImpactTracking,
-} from "@/components/analytics/ImpactTracking";
-
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -183,6 +179,17 @@ const websiteStructuredData = {
 };
 
 
+// Impact (impact.com) tracking tag from the Adidas affiliate program.
+// It is placed directly in the page <head> so Impact can verify the site.
+const impactTagUrl =
+  "https://utt.impactcdn.com/P-A7942752-13ff-4cfa-9050-cac29421adb61.js";
+
+const impactSnippet =
+  "(function(i,m,p,a,c,t){c.ire_o=p;c[p]=c[p]||function(){(c[p].a=c[p].a||[]).push(arguments)};t=a.createElement(m);var z=a.getElementsByTagName(m)[0];t.async=1;t.src=i;z.parentNode.insertBefore(t,z)})('" +
+  impactTagUrl +
+  "','script','impactStat',document,window);impactStat('transformLinks');impactStat('trackImpression');";
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -194,6 +201,15 @@ export default function RootLayout({
       lang="en"
       data-scroll-behavior="smooth"
     >
+      <head>
+        <script
+          type="text/javascript"
+          dangerouslySetInnerHTML={{
+            __html: impactSnippet,
+          }}
+        />
+      </head>
+
       <body>
         <script
           type="application/ld+json"
@@ -216,8 +232,6 @@ export default function RootLayout({
         <Footer />
 
         <ScrollRecommendations />
-
-        <ImpactTracking />
       </body>
     </html>
   );
