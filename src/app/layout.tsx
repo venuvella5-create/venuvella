@@ -16,6 +16,10 @@ import {
   ScrollRecommendations,
 } from "@/components/recommendations/ScrollRecommendations";
 
+import {
+  ImpactTracking,
+} from "@/components/analytics/ImpactTracking";
+
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -212,6 +216,8 @@ export default function RootLayout({
         <Footer />
 
         <ScrollRecommendations />
+
+        <ImpactTracking />
       </body>
     </html>
   );
