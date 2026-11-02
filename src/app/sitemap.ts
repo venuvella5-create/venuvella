@@ -73,6 +73,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       select: {
         slug:
           true,
+
+        parent: {
+          select: {
+            slug:
+              true,
+          },
+        },
       },
     }),
   ]);
@@ -248,7 +255,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           category
         ) => ({
           url:
-            `${siteUrl}/${category.slug}`,
+            category.parent
+              ? `${siteUrl}/${category.parent.slug}/${category.slug.slice(
+                  category.parent.slug.length + 1
+                )}`
+              : `${siteUrl}/${category.slug}`,
 
           changeFrequency:
             "weekly",

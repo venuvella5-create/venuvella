@@ -17,15 +17,33 @@ import {
 } from "./Logo";
 
 
-const links = [
-  "Beauty",
-  "Home",
-  "Fitness",
-  "Style",
-  "Seasonal",
-  "Products",
-  "Guides",
-  "Deals",
+type NavItem = {
+  label: string;
+  href: string;
+  children?: {
+    label: string;
+    href: string;
+  }[];
+};
+
+
+const navItems: NavItem[] = [
+  { label: "Beauty", href: "/beauty" },
+  { label: "Home", href: "/home" },
+  { label: "Fitness", href: "/fitness" },
+  { label: "Style", href: "/style" },
+  {
+    label: "Celebrity Fashion",
+    href: "/celebrity-fashion",
+    children: [
+      { label: "Women", href: "/celebrity-fashion/women" },
+      { label: "Men", href: "/celebrity-fashion/men" },
+    ],
+  },
+  { label: "Seasonal", href: "/seasonal" },
+  { label: "Products", href: "/products" },
+  { label: "Guides", href: "/guides" },
+  { label: "Deals", href: "/deals" },
 ];
 
 
@@ -63,26 +81,49 @@ export function Header() {
 
 
         <nav
-          className="hidden items-center gap-6 xl:flex"
+          className="hidden items-center gap-5 xl:flex"
           aria-label="Primary navigation"
         >
 
-          {links.map(
-            (
-              link
-            ) => (
+          {navItems.map(
+            (item) =>
+              item.children ? (
+                <div
+                  key={item.href}
+                  className="group relative"
+                >
+                  <Link
+                    href={item.href}
+                    className="whitespace-nowrap text-xs font-medium uppercase tracking-[0.11em] text-[var(--muted)] transition hover:text-[var(--ink)]"
+                  >
+                    {item.label}
+                  </Link>
 
-              <Link
-                key={
-                  link
-                }
-                href={`/${link.toLowerCase()}`}
-                className="text-xs font-medium uppercase tracking-[0.11em] text-[var(--muted)] transition hover:text-[var(--ink)]"
-              >
-                {link}
-              </Link>
-
-            )
+                  <div className="invisible absolute left-1/2 top-full z-50 w-44 -translate-x-1/2 pt-4 opacity-0 transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+                    <div className="rounded-xl border border-[var(--line)] bg-white p-2 shadow-lg">
+                      {item.children.map(
+                        (child) => (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            className="block rounded-lg px-4 py-3 text-xs font-medium uppercase tracking-[0.11em] text-[var(--muted)] transition hover:bg-[var(--warm)] hover:text-[var(--ink)]"
+                          >
+                            {child.label}
+                          </Link>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="whitespace-nowrap text-xs font-medium uppercase tracking-[0.11em] text-[var(--muted)] transition hover:text-[var(--ink)]"
+                >
+                  {item.label}
+                </Link>
+              )
           )}
 
         </nav>
@@ -235,24 +276,37 @@ export function Header() {
 
             <div className="grid sm:grid-cols-2 sm:gap-x-8">
 
-              {links.map(
-                (
-                  link
-                ) => (
-
-                  <Link
-                    key={
-                      link
-                    }
-                    href={`/${link.toLowerCase()}`}
-                    onClick={
-                      closeMenu
-                    }
-                    className="border-b border-[var(--line)] py-4 text-sm font-medium uppercase tracking-[0.1em] transition hover:text-[var(--accent)]"
+              {navItems.map(
+                (item) => (
+                  <div
+                    key={item.href}
+                    className="border-b border-[var(--line)]"
                   >
-                    {link}
-                  </Link>
+                    <Link
+                      href={item.href}
+                      onClick={closeMenu}
+                      className="block py-4 text-sm font-medium uppercase tracking-[0.1em] transition hover:text-[var(--accent)]"
+                    >
+                      {item.label}
+                    </Link>
 
+                    {item.children && (
+                      <div className="mb-3 ml-4 flex flex-col border-l border-[var(--line)] pl-4">
+                        {item.children.map(
+                          (child) => (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              onClick={closeMenu}
+                              className="py-2.5 text-xs font-medium uppercase tracking-[0.1em] text-[var(--muted)] transition hover:text-[var(--accent)]"
+                            >
+                              {child.label}
+                            </Link>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )
               )}
 

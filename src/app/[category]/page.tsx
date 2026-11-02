@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound, permanentRedirect } from "next/navigation";
 
 import {
   ArticleCard,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/db/prisma";
 
 import {
+  getArticlesByCategories,
   getArticlesByCategory,
 } from "@/lib/content/articles";
 
@@ -23,6 +25,35 @@ export function generateStaticParams() {
   return [];
 }
 
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ category: string }>;
+}): Promise<Metadata> {
+  const { category: slug } = await params;
+
+  if (!process.env.DATABASE_URL) {
+    return {};
+  }
+
+  const category = await prisma.category.findUnique({
+    where: { slug },
+    select: { name: true, description: true },
+  });
+
+  if (!category) {
+    return {};
+  }
+
+  return {
+    title: category.name,
+    description:
+      category.description ??
+      `Venuvella picks and stories in ${category.name}.`,
+    alternates: { canonical: `/${slug}` },
+  };
+}
 
 export default async function CategoryPage({
   params,
@@ -49,6 +80,25 @@ export default async function CategoryPage({
       where: {
         slug,
       },
+
+      include: {
+        parent: {
+          select: {
+            slug: true,
+          },
+        },
+
+        children: {
+          orderBy: {
+            sortOrder: "asc",
+          },
+
+          select: {
+            name: true,
+            slug: true,
+          },
+        },
+      },
     });
 
 
@@ -59,10 +109,44 @@ export default async function CategoryPage({
   }
 
 
-  const articles =
-    await getArticlesByCategory(
-      slug
+  // A section like "Celebrity Women" lives at /celebrity-fashion/women.
+  if (
+    category.parent &&
+    slug.startsWith(`${category.parent.slug}-`)
+  ) {
+    permanentRedirect(
+      `/${category.parent.slug}/${slug.slice(
+        category.parent.slug.length + 1
+      )}`
     );
+  }
+
+  const childSections =
+    category.children.map(
+      (child) => ({
+        label:
+          child.name.replace(
+            /^Celebrity\s+/,
+            ""
+          ),
+
+        href: `/${slug}/${child.slug.slice(
+          slug.length + 1
+        )}`,
+      })
+    );
+
+  const articles =
+    category.children.length > 0
+      ? await getArticlesByCategories([
+          slug,
+          ...category.children.map(
+            (child) => child.slug
+          ),
+        ])
+      : await getArticlesByCategory(
+          slug
+        );
 
 
   return (
@@ -89,6 +173,25 @@ export default async function CategoryPage({
       </section>
 
 
+      {childSections.length > 0 && (
+        <nav
+          aria-label={`${category.name} sections`}
+          className="mt-10 flex flex-wrap gap-3"
+        >
+          {childSections.map(
+            (section) => (
+              <Link
+                key={section.href}
+                href={section.href}
+                className="inline-flex min-h-[46px] items-center rounded-full border border-[var(--ink)] px-7 text-[11px] font-semibold uppercase tracking-[0.13em] transition hover:bg-[var(--ink)] hover:text-white"
+              >
+                {section.label}
+              </Link>
+            )
+          )}
+        </nav>
+      )}
+
       <section className="mt-14 sm:mt-16">
 
         <div className="grid gap-x-8 gap-y-14 md:grid-cols-2">
@@ -105,6 +208,7 @@ export default async function CategoryPage({
                 }
                 article={{
                   category:
+                    article.category?.name ??
                     category.name,
 
                   title:

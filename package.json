@@ -14,7 +14,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:seed-providers": "tsx prisma/seed-providers.ts",
-    "db:seed-launch": "tsx prisma/seed-launch-content.ts"
+    "db:seed-launch": "tsx prisma/seed-launch-content.ts",
+    "db:seed-celebrity": "tsx prisma/seed-celebrity-fashion.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",

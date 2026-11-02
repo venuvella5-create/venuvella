@@ -205,3 +205,52 @@ export async function getAdminArticles() {
     },
   });
 }
+
+
+/**
+ * Published articles from several categories at once
+ * (used by parent categories such as "Celebrity Fashion",
+ * which also shows the articles of its Women and Men sections).
+ */
+export async function getArticlesByCategories(
+  slugs: string[],
+  limit = 12
+) {
+  if (!process.env.DATABASE_URL) {
+    return [];
+  }
+
+  return prisma.article.findMany({
+    where: {
+      category: {
+        slug: {
+          in: slugs,
+        },
+      },
+
+      status:
+        ContentStatus.PUBLISHED,
+
+      publishedAt: {
+        lte:
+          new Date(),
+      },
+    },
+
+    orderBy: {
+      publishedAt:
+        "desc",
+    },
+
+    take:
+      limit,
+
+    include: {
+      category:
+        true,
+
+      author:
+        true,
+    },
+  });
+}
