@@ -3,6 +3,7 @@
 import { ArticleEditor } from "@/components/admin/ArticleEditor";
 import { requirePageRole } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/db/prisma";
+import { sequential } from "@/lib/db/sequential";
 
 
 export const dynamic =
@@ -43,7 +44,8 @@ export default async function NewArticlePage() {
     categories,
     authors,
     products,
-  ] = await Promise.all([
+    providers,
+  ] = await sequential([
 
     prisma.category.findMany({
       orderBy: {
@@ -116,6 +118,22 @@ export default async function NewArticlePage() {
       },
     }),
 
+    prisma.affiliateProvider.findMany({
+      where: {
+        status: {
+          not: "INACTIVE",
+        },
+      },
+
+      orderBy: {
+        name: "asc",
+      },
+
+      select: {
+        id: true,
+        name: true,
+      },
+    }),
   ]);
 
 
@@ -193,6 +211,7 @@ export default async function NewArticlePage() {
             categories={categories}
             authors={authors}
             products={products}
+            providers={providers}
           />
 
         )}

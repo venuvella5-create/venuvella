@@ -4,9 +4,11 @@ import {
   useActionState,
   useMemo,
   useState,
+  useTransition,
 } from "react";
 
 import { updateArticle } from "@/app/admin/articles/edit-actions";
+import { quickCreateProduct } from "@/app/admin/articles/quick-product";
 
 import { ArticleReadinessPanel } from "@/components/admin/ArticleReadinessPanel";
 import { ArticlePlacementPanel } from "@/components/admin/ArticlePlacementPanel";
@@ -95,6 +97,7 @@ export function EditArticleEditor({
   categories,
   authors,
   products,
+  providers = [],
 }: {
   article: InitialArticle;
 
@@ -109,6 +112,10 @@ export function EditArticleEditor({
   }[];
 
   products: ProductOption[];
+  providers?: {
+    id: string;
+    name: string;
+  }[];
 }) {
   const [blocks, setBlocks] =
     useState<Block[]>(
@@ -165,6 +172,86 @@ export function EditArticleEditor({
     selectedProductIds,
     setSelectedProductIds,
   ] = useState<string[]>([]);
+
+  // ── Quick-create a product from inside the editor ──────────────
+  const [showQuick, setShowQuick] =
+    useState(false);
+  const [quickName, setQuickName] =
+    useState("");
+  const [quickCategoryId, setQuickCategoryId] =
+    useState(article.categoryId);
+  const [quickImage, setQuickImage] =
+    useState("");
+  const [quickBuyUrl, setQuickBuyUrl] =
+    useState("");
+  const [quickProviderId, setQuickProviderId] =
+    useState("");
+  const [quickPrice, setQuickPrice] =
+    useState("");
+  const [quickSummary, setQuickSummary] =
+    useState("");
+  const [quickError, setQuickError] =
+    useState("");
+  const [quickPending, startQuick] =
+    useTransition();
+  const [extraProducts, setExtraProducts] =
+    useState<ProductOption[]>([]);
+
+  const allProducts = useMemo(
+    () => [...extraProducts, ...products],
+    [extraProducts, products]
+  );
+
+  function handleQuickCreate() {
+    setQuickError("");
+
+    startQuick(async () => {
+      const result = await quickCreateProduct({
+        name: quickName,
+        categoryId: quickCategoryId,
+        imageUrl: quickImage,
+        buyUrl: quickBuyUrl,
+        providerId: quickProviderId,
+        price: quickPrice,
+        summary: quickSummary,
+      });
+
+      if (!result.ok) {
+        setQuickError(result.message);
+        return;
+      }
+
+      setExtraProducts((current) => [
+        result.product,
+        ...current,
+      ]);
+
+      setQuickName("");
+      setQuickImage("");
+      setQuickBuyUrl("");
+      setQuickPrice("");
+      setQuickSummary("");
+      setShowQuick(false);
+
+      if (pickerMode === "grid") {
+        setSelectedProductIds((current) => [
+          ...current,
+          result.product.id,
+        ]);
+      } else {
+        insertSingleProduct(result.product.id);
+      }
+    });
+  }
+
+  function quickEnter(
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleQuickCreate();
+    }
+  }
 
 
   const [state, action, pending] =
@@ -292,11 +379,11 @@ export function EditArticleEditor({
 
 
       if (!search) {
-        return products;
+        return allProducts;
       }
 
 
-      return products.filter(
+      return allProducts.filter(
         (product) =>
           product.name
             .toLowerCase()
@@ -311,13 +398,15 @@ export function EditArticleEditor({
             .includes(search)
       );
     }, [
-      products,
+      allProducts,
       productSearch,
     ]);
 
 
   function closePicker() {
     setPickerMode(null);
+    setShowQuick(false);
+    setQuickError("");
     setProductSearch("");
     setSelectedProductIds([]);
   }
@@ -441,7 +530,7 @@ export function EditArticleEditor({
   function getProduct(
     productId: string
   ) {
-    return products.find(
+    return allProducts.find(
       (product) =>
         product.id === productId
     );
@@ -733,6 +822,13 @@ export function EditArticleEditor({
           </div>
 
 
+
+
+        </div>
+
+
+        <div className="sticky top-[88px] z-30 mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-white/95 p-3 shadow-sm backdrop-blur">
+          <p className="admin-eyebrow px-1">Add to story</p>
           <div className="flex flex-wrap gap-2">
 
             <button
@@ -779,13 +875,27 @@ export function EditArticleEditor({
               + Insert product grid
             </button>
 
+            <button
+              type="button"
+              onClick={() => {
+                setPickerMode("single");
+                setSelectedProductIds([]);
+                setShowQuick(true);
+              }}
+              className="admin-secondary"
+            >
+              + New product
+            </button>
           </div>
-
         </div>
 
-
         {pickerMode && (
-          <div className="mt-6 rounded-xl border border-[var(--line)] bg-[#efeee9] p-5">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-[70] overflow-y-auto bg-black/40 px-4 py-10 sm:py-16"
+          >
+          <div className="mx-auto max-w-3xl rounded-2xl border border-[var(--line)] bg-[#efeee9] p-5 shadow-2xl">
 
             <div className="flex flex-wrap items-center justify-between gap-4">
 
@@ -815,6 +925,177 @@ export function EditArticleEditor({
 
             </div>
 
+
+            <div className="mt-5 rounded-xl border border-[var(--line)] bg-white p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">
+                    Product not in the list yet?
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    Create it here with its image and affiliate link. It is
+                    published and added to this article straight away.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowQuick((current) => !current)
+                  }
+                  className="admin-secondary"
+                >
+                  {showQuick
+                    ? "Hide form"
+                    : "+ Create a new product"}
+                </button>
+              </div>
+
+              {showQuick && (
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-xs font-medium">
+                      Product name *
+                    </label>
+                    <input
+                      value={quickName}
+                      onChange={(event) =>
+                        setQuickName(event.target.value)
+                      }
+                      onKeyDown={quickEnter}
+                      className="admin-input w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      Category *
+                    </label>
+                    <select
+                      value={quickCategoryId}
+                      onChange={(event) =>
+                        setQuickCategoryId(event.target.value)
+                      }
+                      className="admin-input w-full"
+                    >
+                      {categories.map((category) => (
+                        <option
+                          key={category.id}
+                          value={category.id}
+                        >
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      Image URL (shows in the article)
+                    </label>
+                    <input
+                      value={quickImage}
+                      onChange={(event) =>
+                        setQuickImage(event.target.value)
+                      }
+                      onKeyDown={quickEnter}
+                      placeholder="https://…/photo.jpg"
+                      className="admin-input w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      Store
+                    </label>
+                    <select
+                      value={quickProviderId}
+                      onChange={(event) =>
+                        setQuickProviderId(event.target.value)
+                      }
+                      className="admin-input w-full"
+                    >
+                      <option value="">
+                        Other / direct link
+                      </option>
+                      {providers.map((provider) => (
+                        <option
+                          key={provider.id}
+                          value={provider.id}
+                        >
+                          {provider.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      Your affiliate link
+                    </label>
+                    <input
+                      value={quickBuyUrl}
+                      onChange={(event) =>
+                        setQuickBuyUrl(event.target.value)
+                      }
+                      onKeyDown={quickEnter}
+                      placeholder="https://…"
+                      className="admin-input w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      Price (USD, optional)
+                    </label>
+                    <input
+                      value={quickPrice}
+                      onChange={(event) =>
+                        setQuickPrice(event.target.value)
+                      }
+                      onKeyDown={quickEnter}
+                      inputMode="decimal"
+                      placeholder="29.99"
+                      className="admin-input w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      Short summary (optional)
+                    </label>
+                    <input
+                      value={quickSummary}
+                      onChange={(event) =>
+                        setQuickSummary(event.target.value)
+                      }
+                      onKeyDown={quickEnter}
+                      className="admin-input w-full"
+                    />
+                  </div>
+
+                  {quickError && (
+                    <p className="admin-error md:col-span-2">
+                      {quickError}
+                    </p>
+                  )}
+
+                  <div className="md:col-span-2">
+                    <button
+                      type="button"
+                      onClick={handleQuickCreate}
+                      disabled={quickPending}
+                      className="admin-primary"
+                    >
+                      {quickPending
+                        ? "Creating…"
+                        : pickerMode === "grid"
+                          ? "Create and select"
+                          : "Create and insert into article"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <input
               type="search"
@@ -981,6 +1262,7 @@ export function EditArticleEditor({
             </div>
 
           </div>
+        </div>
         )}
 
 

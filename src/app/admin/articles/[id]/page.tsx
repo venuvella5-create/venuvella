@@ -16,6 +16,7 @@ import {
 import {
   prisma,
 } from "@/lib/db/prisma";
+import { sequential } from "@/lib/db/sequential";
 
 
 const textBlockTypes = [
@@ -232,7 +233,8 @@ export default async function EditArticlePage({
     categories,
     authors,
     products,
-  ] = await Promise.all([
+    providers,
+  ] = await sequential([
     prisma.category.findMany({
       orderBy: {
         sortOrder:
@@ -301,6 +303,22 @@ export default async function EditArticlePage({
             name: true,
           },
         },
+      },
+    }),
+    prisma.affiliateProvider.findMany({
+      where: {
+        status: {
+          not: "INACTIVE",
+        },
+      },
+
+      orderBy: {
+        name: "asc",
+      },
+
+      select: {
+        id: true,
+        name: true,
       },
     }),
   ]);
@@ -715,6 +733,7 @@ export default async function EditArticlePage({
             products={
               products
             }
+            providers={providers}
           />
 
         </section>
