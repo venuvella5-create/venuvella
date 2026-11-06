@@ -818,13 +818,13 @@ export default async function ArticlePage({
                 </p>
 
 
-                <h1 className="display-serif mt-4 text-5xl leading-[0.95] tracking-[-0.045em] sm:text-6xl lg:text-[76px] xl:text-[88px]">
+                <h1 className="display-serif mt-4 text-4xl leading-[1] tracking-[-0.04em] sm:text-5xl lg:text-6xl xl:text-[64px]">
                   {article.title}
                 </h1>
 
 
                 {article.subtitle && (
-                  <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
+                  <p className="mt-5 max-w-3xl text-base leading-7 text-[var(--muted)] sm:text-lg sm:leading-8">
                     {article.subtitle}
                   </p>
                 )}
@@ -832,7 +832,7 @@ export default async function ArticlePage({
 
                 {!article.subtitle &&
                   article.excerpt && (
-                    <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
+                    <p className="mt-5 max-w-3xl text-base leading-7 text-[var(--muted)] sm:text-lg sm:leading-8">
                       {article.excerpt}
                     </p>
                   )}
@@ -994,7 +994,7 @@ export default async function ArticlePage({
 
             {article.excerpt &&
               article.subtitle && (
-                <p className="mb-10 border-l-2 border-[var(--accent)] pl-5 text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
+                <p className="mb-8 border-l-2 border-[var(--accent)] pl-5 text-base leading-7 text-[var(--muted)] sm:text-lg sm:leading-8">
                   {article.excerpt}
                 </p>
               )}
@@ -1008,98 +1008,92 @@ export default async function ArticlePage({
                   blockIndex
                 ) => {
 
-                  if (
-                    block.type ===
-                    "PRODUCT"
-                  ) {
-                    const productId =
-                      getProductId(
-                        block.data
-                      );
-
-
+                  if (block.type === "PRODUCT") {
+                    // Consecutive product blocks are shown together, side by
+                    // side, under one heading. The first block of the run
+                    // draws them all; the others draw nothing.
                     if (
-                      !productId
+                      blockIndex > 0 &&
+                      article.blocks[blockIndex - 1].type === "PRODUCT"
                     ) {
                       return null;
                     }
 
+                    const runProductIds: string[] = [];
 
-                    const product =
-                      productMap.get(
-                        productId
+                    for (
+                      let next = blockIndex;
+                      next < article.blocks.length &&
+                      article.blocks[next].type === "PRODUCT";
+                      next++
+                    ) {
+                      const runId = getProductId(
+                        article.blocks[next].data
                       );
 
+                      if (runId && !runProductIds.includes(runId)) {
+                        runProductIds.push(runId);
+                      }
+                    }
 
-                    if (
-                      !product
-                    ) {
+                    const runProducts = runProductIds
+                      .map((runId) => productMap.get(runId))
+                      .filter(
+                        (
+                          item
+                        ): item is NonNullable<typeof item> =>
+                          Boolean(item)
+                      );
+
+                    if (runProducts.length === 0) {
                       return (
                         <aside
-                          key={
-                            block.id
-                          }
+                          key={block.id}
                           className="my-10 rounded-2xl border border-[var(--line)] bg-[#efeee9] p-5"
                         >
-
                           <p className="text-sm leading-6 text-[var(--muted)]">
                             This product is currently unavailable.
                           </p>
-
                         </aside>
                       );
                     }
 
-
                     return (
                       <section
-                        key={
-                          block.id
-                        }
-                        className="my-14 border-y border-[var(--line)] py-8"
+                        key={block.id}
+                        className="my-10 border-y border-[var(--line)] py-7"
                       >
-
-                        <div className="mb-6">
-
+                        <div className="mb-5">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-                            Venuvella pick
+                            Venuvella {runProducts.length > 1 ? "picks" : "pick"}
                           </p>
-
-
-                          <h2 className="display-serif mt-2 text-3xl leading-tight">
+                          <h2 className="display-serif mt-2 text-2xl leading-tight">
                             From this story
                           </h2>
-
                         </div>
 
-
-                        <div className="max-w-sm">
-
-                          <ProductCard
-                            brand={
-                              product.brand
-                                ?.name ??
-                              "Venuvella"
-                            }
-                            name={
-                              product.name
-                            }
-                            summary={
-                              product.editorialSummary ??
-                              ""
-                            }
-                            image={
-                              product.images[0]
-                                ?.url ??
-                              "/placeholder.png"
-                            }
-                            slug={`${product.slug}?article=${encodeURIComponent(
-                              article.slug
-                            )}`}
-                          />
-
+                        <div
+                          className={
+                            runProducts.length === 1
+                              ? "max-w-xs"
+                              : "grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3"
+                          }
+                        >
+                          {runProducts.map((product) => (
+                            <ProductCard
+                              key={product.id}
+                              brand={product.brand?.name ?? "Venuvella"}
+                              name={product.name}
+                              summary={product.editorialSummary ?? ""}
+                              image={
+                                product.images[0]?.url ?? "/placeholder.png"
+                              }
+                              slug={`${product.slug}?article=${encodeURIComponent(
+                                article.slug
+                              )}`}
+                            />
+                          ))}
                         </div>
-
                       </section>
                     );
                   }
@@ -1173,7 +1167,7 @@ export default async function ArticlePage({
                           </p>
 
 
-                          <h2 className="display-serif mt-2 text-3xl leading-tight sm:text-4xl">
+                          <h2 className="display-serif mt-2 text-2xl leading-tight sm:text-3xl">
                             Products from this story
                           </h2>
 
@@ -1185,7 +1179,7 @@ export default async function ArticlePage({
                         </div>
 
 
-                        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
 
                           {gridProducts.map(
                             (
@@ -1252,7 +1246,7 @@ export default async function ArticlePage({
                             blockIndex
                           )
                         }
-                        className="display-serif scroll-mt-28 pb-1 pt-8 text-3xl leading-[1.08] tracking-[-0.02em] sm:text-4xl"
+                        className="display-serif scroll-mt-28 pb-1 pt-6 text-2xl leading-[1.1] tracking-[-0.02em] sm:text-3xl"
                       >
                         {text}
                       </h2>
@@ -1269,7 +1263,7 @@ export default async function ArticlePage({
                         key={
                           block.id
                         }
-                        className="display-serif my-10 border-l-2 border-[var(--accent)] pl-6 text-2xl leading-[1.25] tracking-[-0.015em] text-[var(--ink)] sm:text-3xl"
+                        className="display-serif my-8 border-l-2 border-[var(--accent)] pl-6 text-xl leading-[1.3] tracking-[-0.015em] text-[var(--ink)] sm:text-2xl"
                       >
                         {text}
                       </blockquote>
@@ -1302,7 +1296,7 @@ export default async function ArticlePage({
                         key={
                           block.id
                         }
-                        className="my-7 list-disc space-y-3 pl-6 text-[17px] leading-8 text-[var(--ink)] sm:text-lg"
+                        className="my-6 list-disc space-y-2 pl-6 text-[15px] leading-7 text-[var(--ink)] sm:text-[17px] sm:leading-8"
                       >
 
                         {items.map(
@@ -1352,7 +1346,7 @@ export default async function ArticlePage({
                         key={
                           block.id
                         }
-                        className="my-7 list-decimal space-y-3 pl-6 text-[17px] leading-8 text-[var(--ink)] sm:text-lg"
+                        className="my-6 list-decimal space-y-2 pl-6 text-[15px] leading-7 text-[var(--ink)] sm:text-[17px] sm:leading-8"
                       >
 
                         {items.map(
@@ -1406,7 +1400,7 @@ export default async function ArticlePage({
                       key={
                         block.id
                       }
-                      className="my-6 text-[17px] leading-8 text-[var(--ink)] sm:text-[19px] sm:leading-9"
+                      className="my-5 text-[15px] leading-7 text-[var(--ink)] sm:text-[17px] sm:leading-8"
                     >
                       {text}
                     </p>
