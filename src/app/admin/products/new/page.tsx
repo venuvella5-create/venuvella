@@ -4,6 +4,7 @@ import { requirePageRole } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/db/prisma";
 
 import { createProduct } from "./actions";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
 
 export const dynamic = "force-dynamic";
 
@@ -110,16 +111,12 @@ export default async function NewProductPage({
 
             <div>
               <label className="mb-2 block text-sm font-medium">
-                Image URL
+                Product image
               </label>
-              <input
-                name="imageUrl"
-                type="url"
-                placeholder="https://…/photo.jpg"
-                className="admin-input w-full"
-              />
+              <ImageUploadField name="imageUrl" />
               <p className="mt-1 text-xs text-[var(--muted)]">
-                Paste a direct link to the product image.
+                Upload a picture from your computer or phone. Only use images
+                you have the right to use.
               </p>
             </div>
 

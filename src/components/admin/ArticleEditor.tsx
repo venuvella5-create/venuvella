@@ -9,6 +9,7 @@ import {
 
 import { createArticle } from "@/app/admin/articles/actions";
 import { quickCreateProduct } from "@/app/admin/articles/quick-product";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
 
 import { ArticleReadinessPanel } from "@/components/admin/ArticleReadinessPanel";
 import { ArticlePlacementPanel } from "@/components/admin/ArticlePlacementPanel";
@@ -609,20 +610,13 @@ export function ArticleEditor({
 
           <div>
             <label className="admin-label">
-              Featured image URL
+              Featured image
             </label>
 
-            <input
+            <ImageUploadField
               name="featuredImage"
-              type="url"
               value={featuredImage}
-              onChange={(event) =>
-                setFeaturedImage(
-                  event.target.value
-                )
-              }
-              className="admin-input"
-              placeholder="https://..."
+              onChange={setFeaturedImage}
             />
           </div>
 
@@ -932,16 +926,11 @@ export function ArticleEditor({
 
                   <div>
                     <label className="mb-1 block text-xs font-medium">
-                      Image URL (shows in the article)
+                      Image (shows in the article)
                     </label>
-                    <input
+                    <ImageUploadField
                       value={quickImage}
-                      onChange={(event) =>
-                        setQuickImage(event.target.value)
-                      }
-                      onKeyDown={quickEnter}
-                      placeholder="https://…/photo.jpg"
-                      className="admin-input w-full"
+                      onChange={setQuickImage}
                     />
                   </div>
 

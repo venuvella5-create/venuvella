@@ -7,6 +7,7 @@ import {
 import {
   prisma,
 } from "@/lib/db/prisma";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
 
 import {
   requirePageRole,
@@ -514,7 +515,7 @@ export default async function AdminProductPage({
         <section className="mb-6 rounded-2xl border border-[var(--line)] bg-white p-5">
           <p className="admin-eyebrow">Product images</p>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Paste a direct link to an image. The first image is the main one.
+            Upload a picture from your computer or phone. The first image is the main one.
           </p>
 
           {product.images.length > 0 ? (
@@ -548,13 +549,9 @@ export default async function AdminProductPage({
 
           <form action={addProductImage} className="mt-4 flex flex-wrap items-center gap-3">
             <input type="hidden" name="productId" value={product.id} />
-            <input
-              name="url"
-              type="url"
-              required
-              placeholder="https://…/photo.jpg"
-              className="admin-input min-w-[260px] flex-1"
-            />
+            <div className="min-w-[260px] flex-1">
+              <ImageUploadField name="url" required />
+            </div>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="makeMain" defaultChecked />
               Make main image
