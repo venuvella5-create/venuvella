@@ -13,6 +13,7 @@ import {
 import {
   ProductCard,
 } from "@/components/editorial/ProductCard";
+import { Reveal } from "@/components/effects/Reveal";
 
 import {
   ArticleViewTracker,
@@ -33,6 +34,9 @@ import {
   prisma,
 } from "@/lib/db/prisma";
 
+
+// Product cards slide in from a different direction each, left to right.
+const REVEAL_DIRECTIONS = ["left", "up", "right"] as const;
 
 export const revalidate =
   300;
@@ -1079,7 +1083,12 @@ export default async function ArticlePage({
                               : "grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3"
                           }
                         >
-                          {runProducts.map((product) => (
+                          {runProducts.map((product, runIndex) => (
+                            <Reveal
+                              key={product.id}
+                              direction={REVEAL_DIRECTIONS[runIndex % 3]}
+                              delay={runIndex * 130}
+                            >
                             <ProductCard
                               key={product.id}
                               brand={product.brand?.name ?? "Venuvella"}
@@ -1092,6 +1101,7 @@ export default async function ArticlePage({
                                 article.slug
                               )}`}
                             />
+                            </Reveal>
                           ))}
                         </div>
                       </section>
@@ -1182,10 +1192,12 @@ export default async function ArticlePage({
                         <div className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
 
                           {gridProducts.map(
-                            (
-                              product
-                            ) => (
-
+                            (product, gridIndex) => (
+                              <Reveal
+                                key={product.id}
+                                direction={REVEAL_DIRECTIONS[gridIndex % 3]}
+                                delay={gridIndex * 130}
+                              >
                               <ProductCard
                                 key={
                                   product.id
@@ -1211,6 +1223,7 @@ export default async function ArticlePage({
                                   article.slug
                                 )}`}
                               />
+                              </Reveal>
 
                             )
                           )}

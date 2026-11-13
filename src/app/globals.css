@@ -2,13 +2,23 @@
 
 
 :root {
-  --ink: #20211f;
-  --muted: #696b66;
-  --line: #dedfd9;
-  --paper: #f7f6f2;
-  --warm: #eeeae2;
+  /* Venuvella palette: Indigo Black, Bone and Amber */
+  --indigo: #070c29;
+  --indigo-2: #121a4d;
+  --bone: #efe7da;
+  --amber: #ff9e0d;
+
+  --ink: #070c29;
+  --muted: #555a70;
+  --line: #ddd5c5;
+  --paper: #f8f4ec;
+  --warm: #efe7da;
   --white: #ffffff;
-  --accent: #9b735c;
+
+  /* Amber is too light for small text on a light page (1.9:1), so text
+     accents use a deeper amber. Bright amber is for fills and for dark
+     backgrounds. */
+  --accent: #a85a00;
 }
 
 
@@ -39,7 +49,7 @@
   }
 
   ::selection {
-    background: #ded6cc;
+    background: rgba(255, 158, 13, 0.32);
     color: var(--ink);
   }
 }
@@ -208,4 +218,103 @@
  */
 .text-white {
   color: #ffffff !important;
+}
+
+
+/* ── Gradient surfaces ───────────────────────────────────────────── */
+
+/* Deep indigo with a soft amber glow, for dark call-to-action bands */
+.bg-night {
+  background:
+    radial-gradient(
+      ellipse 60% 90% at 88% 0%,
+      rgba(255, 158, 13, 0.3),
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 50% 70% at 0% 100%,
+      rgba(255, 158, 13, 0.1),
+      transparent 60%
+    ),
+    linear-gradient(135deg, #070c29 0%, #121a4d 100%);
+}
+
+/* Thin indigo-to-amber line along the top of the header */
+.brand-rule {
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    #070c29 0%,
+    #ff9e0d 50%,
+    #070c29 100%
+  );
+}
+
+/* Dark buttons turn amber on hover, with indigo text for contrast */
+a.bg-\[var\(--ink\)\],
+button.bg-\[var\(--ink\)\] {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+a.bg-\[var\(--ink\)\]:hover,
+button.bg-\[var\(--ink\)\]:hover {
+  background: var(--amber);
+  color: var(--ink) !important;
+}
+
+
+/* ── Scroll animation for products (see components/effects/Reveal) ── */
+
+[data-reveal="hidden"] {
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+[data-reveal="hidden"][data-direction="left"] {
+  transform: translateX(-56px);
+}
+
+[data-reveal="hidden"][data-direction="right"] {
+  transform: translateX(56px);
+}
+
+[data-reveal="hidden"][data-direction="up"] {
+  transform: translateY(48px);
+}
+
+[data-reveal="hidden"][data-direction="down"] {
+  transform: translateY(-48px);
+}
+
+[data-reveal="shown"] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+    translate 0.3s ease;
+  transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms), 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+
+/* A dark area: wrap a section in .theme-night and everything inside that
+   uses the palette variables switches to light-on-indigo automatically. */
+.theme-night {
+  --ink: #efe7da;
+  --muted: rgba(239, 231, 218, 0.74);
+  --line: rgba(239, 231, 218, 0.18);
+  --accent: #ff9e0d;
+  --warm: #121a4d;
+  color: #efe7da;
 }

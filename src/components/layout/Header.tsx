@@ -65,6 +65,8 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--paper)]/95 backdrop-blur">
+      <div className="brand-rule" aria-hidden="true" />
+
 
       <div className="container-shell flex h-[76px] items-center justify-between gap-5">
 

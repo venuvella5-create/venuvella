@@ -189,7 +189,7 @@ export default async function HomePage() {
 
   return (
     <main>
-      <section className="border-b border-[var(--line)]">
+      <section className="theme-night bg-night">
         <div className="container-shell grid gap-8 py-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch lg:py-12">
           <div className="flex flex-col justify-center py-6 lg:pr-10">
             <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
@@ -208,15 +208,15 @@ export default async function HomePage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/articles"
-                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-[#1f211f] px-7 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] !text-white transition hover:opacity-90"
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-[var(--amber)] px-7 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] !text-[#070c29] transition hover:brightness-110"
               >
-                <span className="text-white">Explore the latest</span>
-                <ArrowRight size={15} className="text-white" />
+                <span className="text-[#070c29]">Explore the latest</span>
+                <ArrowRight size={15} className="text-[#070c29]" />
               </Link>
 
               <Link
                 href="/guides"
-                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--ink)] px-7 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink)] transition hover:bg-[var(--ink)] hover:text-white"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-[var(--bone)] px-7 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--bone)] transition hover:bg-[var(--bone)] hover:!text-[#070c29]"
               >
                 Browse guides
               </Link>
@@ -452,7 +452,7 @@ export default async function HomePage() {
       </section>
 
       <section id="newsletter" className="container-shell pb-20">
-        <div className="relative overflow-hidden bg-[var(--ink)] px-6 py-14 text-white sm:px-12 sm:py-16">
+        <div className="relative overflow-hidden bg-night px-6 py-14 text-white sm:px-12 sm:py-16">
           <Sparkles
             aria-hidden="true"
             className="absolute right-8 top-8 text-white/10"
@@ -492,7 +492,7 @@ export default async function HomePage() {
 function TrustPoint({ text }: { text: string }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-white">
+      <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-white text-[#070c29]">
         <Check size={11} />
       </span>
 
